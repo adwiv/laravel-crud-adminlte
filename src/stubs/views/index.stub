@@ -1,0 +1,46 @@
+@extends('layouts.adminlte')
+
+@section('title', '{{ model }} List')
+
+@section('content_header')
+    <div class="row">
+        <div class="col-md-6">
+            <h1 class="m-0 text-dark">{{ model }} List</h1>
+        </div>
+    </div>
+@stop
+
+@section('content')
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                            <tr>
+                                {{ HEAD }}
+                            </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                            @forelse(${{ pluralModelVariable }} as ${{ modelVariable }})
+                                <tr>
+                                    {{ BODY }}
+                                </tr>
+                            @empty
+                                <tr>
+                                    {{ EMPTY }}
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- // pagination --}}
+    <div class="row justify-content-center">
+        {{ ${{ pluralModelVariable }}->links('pagination::bootstrap-4') }}
+    </div>
+@stop

@@ -1,0 +1,24 @@
+{
+    "name": "adwiv/laravel-crud-generator",
+    "description": "Generate CRUD Model, Controller, Resource, Request and Views for Laravel",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^7.2 || ^8.0",
+        "laravel/framework": ">=6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Adwiv\\Laravel\\CrudGenerator\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Adwiv\\Laravel\\CrudGenerator\\CrudGeneratorServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

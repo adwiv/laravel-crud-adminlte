@@ -1,0 +1,25 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+{{ IMPORTS }}
+
+/**
+ * @mixin \Eloquent
+ */
+class {{ class }} extends Model
+{
+    use HasFactory;
+
+    protected $guarded = [];
+
+    protected $casts = [
+        {{ CASTS }}
+    ];
+
+    {{ UNIQUES }}
+    {{ BELONGS }}
+    {{ HASMANY }}
+}

@@ -1,0 +1,97 @@
+<?php
+/** @noinspection PhpMissingReturnTypeInspection */
+
+namespace {{ namespace }};
+
+use {{ namespacedModel }};
+use {{ namespacedParentModel }};
+use {{ rootNamespace }}Http\Controllers\Controller;
+use {{ rootNamespace }}Http\Requests\{{ model }}Request;
+use Exception;
+
+class {{ class }} extends Controller
+{
+    public function index(${{ parentModelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
+        return view('{{ viewPrefix }}{{ modelVariable }}-index', compact('{{ pluralModelVariable }}'));
+    }
+
+    public function create(${{ parentModelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ modelVariable }} = null;
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+    }
+
+    public function store({{ model }}Request $request, ${{ parentModelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        $fields = $request->validated();
+        $fields['{{ parentModelVariable }}_id'] = ${{ parentModelVariable }}->id;
+
+        try {
+            {{ model }}::create($fields);
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not create {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        $referrer = $request->get('_referrer');
+        $redirectTo = $referrer ?: route('{{ routePrefix }}{{ pluralParentModelVariable }}.{{ pluralModelVariable }}.index', ${{ parentModelVariable }});
+
+        return redirect($redirectTo)->with('success', '{{ model }} created successfully');
+    }
+
+    public function show(${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+
+        return view('{{ viewPrefix }}{{ modelVariable }}-show', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+    }
+
+    public function edit(${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+    }
+
+    public function update({{ model }}Request $request, ${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+
+        $fields = $request->validated();
+        try {
+            ${{ modelVariable }}->update($fields);
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not update {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        $referrer = $request->get('_referrer');
+        $redirectTo = $referrer ?: route('{{ routePrefix }}{{ pluralParentModelVariable }}.{{ pluralModelVariable }}.index', ${{ parentModelVariable }});
+
+        return redirect($redirectTo)->with('success', '{{ model }} updated successfully');
+    }
+
+    public function destroy(${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    {
+        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
+        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+
+        try {
+            ${{ modelVariable }}->delete();
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not delete {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', '{{ model }} deleted successfully');
+    }
+}

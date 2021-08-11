@@ -1,0 +1,46 @@
+<?php
+/** @noinspection PhpMissingReturnTypeInspection */
+
+namespace {{ namespace }};
+
+use {{ namespacedModel }};
+use {{ rootNamespace }}Http\Controllers\Controller;
+use {{ rootNamespace }}Http\Requests\{{ model }}Request;
+use {{ rootNamespace }}Http\Resources\{{ model }}Resource;
+use Exception;
+
+class {{ class }} extends Controller
+{
+    public function index()
+    {
+        ${{ pluralModelVariable }} = {{ model }}::paginate();
+        return {{ model }}Resource::collection(${{ pluralModelVariable }});
+    }
+
+    public function store({{ model }}Request $request)
+    {
+        $fields = $request->validated();
+        ${{ modelVariable }} = {{ model }}::create($fields);
+        return new {{ model }}Resource(${{ modelVariable }});
+    }
+
+    public function show($id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        return new {{ model }}Resource(${{ modelVariable }});
+    }
+
+    public function update({{ model }}Request $request, $id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        $fields = $request->validated();
+        ${{ modelVariable }}->update($fields);
+        return new {{ model }}Resource(${{ modelVariable }});
+    }
+
+    public function destroy($id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        ${{ modelVariable }}->delete();
+    }
+}

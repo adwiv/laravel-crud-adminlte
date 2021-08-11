@@ -1,0 +1,79 @@
+<?php
+/** @noinspection PhpMissingReturnTypeInspection */
+
+namespace {{ namespace }};
+
+use {{ namespacedModel }};
+use {{ rootNamespace }}Http\Controllers\Controller;
+use {{ rootNamespace }}Http\Requests\{{ model }}Request;
+use Exception;
+
+class {{ class }} extends Controller
+{
+    public function index()
+    {
+        ${{ pluralModelVariable }} = {{ model }}::paginate();
+        return view('{{ viewPrefix }}{{ modelVariable }}-index', compact('{{ pluralModelVariable }}'));
+    }
+
+    public function create()
+    {
+        ${{ modelVariable }} = null;
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}'));
+    }
+
+    public function store({{ model }}Request $request)
+    {
+        $fields = $request->validated();
+        try {
+            {{ model }}::create($fields);
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not create {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        $referrer = $request->get('_referrer');
+        $redirectTo = $referrer ?: route('{{ routePrefix }}{{ pluralModelVariable }}.index');
+
+        return redirect($redirectTo)->with('success', '{{ model }} created successfully');
+    }
+
+    public function show($id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        return view('{{ viewPrefix }}{{ modelVariable }}-show', compact('{{ modelVariable }}'));
+    }
+
+    public function edit($id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}'));
+    }
+
+    public function update({{ model }}Request $request, $id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        $fields = $request->validated();
+        try {
+            ${{ modelVariable }}->update($fields);
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not update {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        $referrer = $request->get('_referrer');
+        $redirectTo = $referrer ?: route('{{ routePrefix }}{{ pluralModelVariable }}.index');
+
+        return redirect($redirectTo)->with('success', '{{ model }} updated successfully');
+    }
+
+    public function destroy($id)
+    {
+        ${{ modelVariable }} = {{ model }}::findOrFail($id);
+        try {
+            ${{ modelVariable }}->delete();
+        } catch (Exception $e) {
+            return redirect()->back()->with('warning', 'Could not delete {{ modelVariable }}. ' . $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', '{{ model }} deleted successfully');
+    }
+}
