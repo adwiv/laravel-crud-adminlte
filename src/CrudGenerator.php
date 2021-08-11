@@ -9,6 +9,8 @@ use Symfony\Component\Console\Input\InputOption;
 
 class CrudGenerator extends Command
 {
+    use ClassHelper;
+
     /**
      * The console command name.
      *
@@ -25,46 +27,58 @@ class CrudGenerator extends Command
 
     public function handle()
     {
-        echo "Handling Crud\n";
-        $resourceName = Str::studly($this->getNameInput());
+        $model = trim($this->argument('model'));
+        $modelClass = $this->getModelClass($model);
+        $modelBaseName = class_basename($modelClass);
+
         if (!($table = $this->option('table'))) {
-            $table = Str::snake(Str::plural($resourceName));
+            if (class_exists($modelClass)) {
+                $table = (new $modelClass())->getTable();
+            } else {
+                $table = Str::snake(Str::plural($model));
+            }
         }
 
-        $columns = ColumnInfo::fromTable($table);
-        foreach ($columns as $column) {
-            echo json_encode($column) . PHP_EOL;
-        }
-    }
+        echo "Creating CRUD for '$modelClass' using '$table' table\n";
 
-    /**
-     * Get the desired class name from the input.
-     *
-     * @return string
-     */
-    protected function getNameInput()
-    {
-        return trim($this->argument('name'));
+        // Generate Model
+        if (!class_exists($modelClass) || $this->confirm("$modelClass already exists. Do you want to overwrite it?", false)) {
+            $this->call('crud:model', ['name' => $modelClass, '--table' => $table, '--force' => true]);
+        }
+
+        // Generate Request
+        $requestClass = $this->getRequestClass("{$modelBaseName}Request");
+        if (!class_exists($requestClass) || $this->confirm("$requestClass already exists. Do you want to overwrite it?", false)) {
+            $this->call('crud:request', ['name' => $requestClass, '--model' => $modelClass, '--force' => true]);
+        }
+
+        // Generate Resource
+        $resourceClass = $this->getResourceClass("{$modelBaseName}Resource");
+        if (!class_exists($resourceClass) || $this->confirm("$resourceClass already exists. Do you want to overwrite it?", false)) {
+            $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
+        }
+
+        // Generate Controller
+        $controllerClass = $this->getControllerClass("{$modelBaseName}Controller");
+        if (!class_exists($controllerClass) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
+            $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true]);
+        }
     }
 
     /**
      * Get the console command arguments.
-     *
-     * @return array
      */
-    protected function getArguments()
+    protected function getArguments(): array
     {
         return [
-            ['name', InputArgument::REQUIRED, 'The name of the resource'],
+            ['model', InputArgument::REQUIRED, 'Specify the model class.'],
         ];
     }
 
     /**
      * Get the console command options.
-     *
-     * @return array
      */
-    protected function getOptions()
+    protected function getOptions(): array
     {
         return [
             ['table', null, InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],

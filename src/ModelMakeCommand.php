@@ -3,72 +3,27 @@
 namespace Adwiv\Laravel\CrudGenerator;
 
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
 class ModelMakeCommand extends GeneratorCommand
 {
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
+    use ClassHelper;
+
     protected $name = 'crud:model';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Create a new Eloquent model class';
-
-    /**
-     * The type of class being generated.
-     *
-     * @var string
-     */
     protected $type = 'Model';
 
-    /**
-     * Get the stub file for the generator.
-     *
-     * @return string
-     */
-    protected function getStub()
+    protected function getStub(): string
     {
         return $this->option('pivot')
             ? $this->resolveStubPath('/stubs/model/pivot.stub')
             : $this->resolveStubPath('/stubs/model/model.stub');
     }
 
-    /**
-     * Resolve the fully-qualified path to the stub.
-     *
-     * @param string $stub
-     * @return string
-     */
-    protected function resolveStubPath($stub)
-    {
-        return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
-            ? $customPath
-            : __DIR__ . $stub;
-    }
-
-    /**
-     * Get the default namespace for the class.
-     *
-     * @param string $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace)
-    {
-        return is_dir(app_path('Models')) ? $rootNamespace . '\\Models' : $rootNamespace;
-    }
-
     protected function buildClass($name)
     {
-        $modelClass = $this->parseModel($name);
+        $modelClass = $this->getModelClass($name);
 
         if (!($table = $this->option('table'))) {
             $table = Str::snake(Str::pluralStudly(class_basename($name)));
@@ -153,28 +108,9 @@ class ModelMakeCommand extends GeneratorCommand
     }
 
     /**
-     * Get the fully-qualified model class name.
-     *
-     * @param string $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function parseModel($model)
-    {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new \InvalidArgumentException('Model name contains invalid characters.');
-        }
-
-        return $this->qualifyModel($model);
-    }
-
-    /**
      * Get the console command options.
-     *
-     * @return array
      */
-    protected function getOptions()
+    protected function getOptions(): array
     {
         return [
             ['force', null, InputOption::VALUE_NONE, 'Overwrite if file exists'],

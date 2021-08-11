@@ -9,75 +9,22 @@ use Symfony\Component\Console\Input\InputOption;
 
 class RequestMakeCommand extends GeneratorCommand
 {
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
+    use ClassHelper;
+
     protected $name = 'crud:request';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Create a new form request class';
-
-    /**
-     * The type of class being generated.
-     *
-     * @var string
-     */
     protected $type = 'Request';
 
-    /**
-     * Get the stub file for the generator.
-     *
-     * @return string
-     */
-    protected function getStub()
+    protected function getStub(): string
     {
         return $this->resolveStubPath('/stubs/request.stub');
     }
 
-    /**
-     * Resolve the fully-qualified path to the stub.
-     *
-     * @param string $stub
-     * @return string
-     */
-    protected function resolveStubPath($stub)
-    {
-        return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
-            ? $customPath
-            : __DIR__ . $stub;
-    }
-
-    /**
-     * Get the default namespace for the class.
-     *
-     * @param string $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace)
-    {
-        return $rootNamespace . '\Http\Requests';
-    }
-
     protected function buildClass($name)
     {
-        if (!($model = $this->option('model'))) {
-            $suffix = $this->type;
-            $baseLen = strlen($suffix);
-            $baseName = class_basename($name);
-            if (strlen($baseName) > $baseLen && str_ends_with($baseName, $suffix)) {
-                $model = substr($baseName, 0, -$baseLen);
-            } else {
-                $this->error('Could not guess model name. Please use --model option');
-            }
-        }
+        $model = $this->guessModelName($name);
+        $modelClass = $this->getModelClass($model);
 
-        $modelClass = $this->parseModel($model);
         /** @var Model $modelObject */
         $modelObject = new $modelClass();
         $table = $modelObject->getTable();
@@ -116,23 +63,6 @@ class RequestMakeCommand extends GeneratorCommand
         return str_replace(
             array_keys($replace), array_values($replace), parent::buildClass($name)
         );
-    }
-
-    /**
-     * Get the fully-qualified model class name.
-     *
-     * @param string $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function parseModel($model)
-    {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new \InvalidArgumentException('Model name contains invalid characters.');
-        }
-
-        return $this->qualifyModel($model);
     }
 
     /**

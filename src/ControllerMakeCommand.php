@@ -9,33 +9,13 @@ use Symfony\Component\Console\Input\InputOption;
 
 class ControllerMakeCommand extends GeneratorCommand
 {
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
+    use ClassHelper;
+
     protected $name = 'crud:controller';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Create a new controller class';
-
-    /**
-     * The type of class being generated.
-     *
-     * @var string
-     */
     protected $type = 'Controller';
 
-    /**
-     * Get the stub file for the generator.
-     *
-     * @return string
-     */
-    protected function getStub()
+    protected function getStub(): string
     {
         $stub = '/stubs/controller/resource.stub';
 
@@ -53,51 +33,9 @@ class ControllerMakeCommand extends GeneratorCommand
         return $this->resolveStubPath($stub);
     }
 
-    /**
-     * Resolve the fully-qualified path to the stub.
-     *
-     * @param string $stub
-     * @return string
-     */
-    protected function resolveStubPath($stub)
-    {
-        return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
-            ? $customPath
-            : __DIR__ . $stub;
-    }
-
-    /**
-     * Get the default namespace for the class.
-     *
-     * @param string $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace)
-    {
-        return $rootNamespace . '\Http\Controllers';
-    }
-
-    /**
-     * Build the class with the given name.
-     *
-     * Remove the base controller import if we are already in the base namespace.
-     *
-     * @param string $name
-     * @return string
-     */
     protected function buildClass($name)
     {
-        if (!($model = $this->option('model'))) {
-            $suffix = $this->type;
-            $baseLen = strlen($suffix);
-            $baseName = class_basename($name);
-            if (strlen($baseName) > $baseLen && str_ends_with($baseName, $suffix)) {
-                $model = substr($baseName, 0, -$baseLen);
-            } else {
-                $this->error('Could not guess model name. Please use --model option');
-            }
-        }
-
+        $model = $this->guessModelName($name);
         $replace = [];
 
         if ($parent = $this->option('parent')) {
@@ -106,8 +44,8 @@ class ControllerMakeCommand extends GeneratorCommand
 
         $replace = $this->buildModelReplacements($replace, $model);
 
-        $replace['{{ viewPrefix }}'] = $this->option('view') ?? '';
-        $replace['{{ routePrefix }}'] = $this->option('route') ?? '';
+        $replace['{{ viewPrefix }}'] = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
+        $replace['{{ routePrefix }}'] = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
 
         $controllerNamespace = $this->getNamespace($name);
         $replace["use {$controllerNamespace}\Controller;\n"] = '';
@@ -119,12 +57,10 @@ class ControllerMakeCommand extends GeneratorCommand
 
     /**
      * Build the replacements for a parent controller.
-     *
-     * @return array
      */
-    protected function buildParentReplacements($parent)
+    protected function buildParentReplacements($parent): array
     {
-        $parentModelClass = $this->parseModel($parent);
+        $parentModelClass = $this->getModelClass($parent);
 
         if (!class_exists($parentModelClass)) {
             if ($this->confirm("A {$parentModelClass} model does not exist. Do you want to generate it?", true)) {
@@ -142,14 +78,10 @@ class ControllerMakeCommand extends GeneratorCommand
 
     /**
      * Build the model replacement values.
-     *
-     * @param array $replace
-     * @param string $model
-     * @return array
      */
-    protected function buildModelReplacements(array $replace, string $model)
+    protected function buildModelReplacements(array $replace, string $model): array
     {
-        $modelClass = $this->parseModel($model);
+        $modelClass = $this->getModelClass($model);
 
         if (!class_exists($modelClass)) {
             if ($this->confirm("A {$modelClass} model does not exist. Do you want to generate it?", true)) {
@@ -166,28 +98,9 @@ class ControllerMakeCommand extends GeneratorCommand
     }
 
     /**
-     * Get the fully-qualified model class name.
-     *
-     * @param string $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function parseModel($model)
-    {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new InvalidArgumentException('Model name contains invalid characters.');
-        }
-
-        return $this->qualifyModel($model);
-    }
-
-    /**
      * Get the console command options.
-     *
-     * @return array
      */
-    protected function getOptions()
+    protected function getOptions(): array
     {
         return [
             ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
@@ -195,8 +108,9 @@ class ControllerMakeCommand extends GeneratorCommand
             ['model', null, InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
             ['parent', null, InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
             ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller. Requires --parent option'],
-            ['route', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
-            ['view', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
+            ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for views and routes.'],
+            ['view-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
+            ['route-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
         ];
     }
 }

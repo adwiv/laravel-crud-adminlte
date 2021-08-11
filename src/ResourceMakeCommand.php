@@ -9,102 +9,38 @@ use Symfony\Component\Console\Input\InputOption;
 
 class ResourceMakeCommand extends GeneratorCommand
 {
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
+    use ClassHelper;
+
     protected $name = 'crud:resource';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Create a new resource';
-
-    /**
-     * The type of class being generated.
-     *
-     * @var string
-     */
     protected $type = 'Resource';
 
-    /**
-     * Execute the console command.
-     *
-     * @return void
-     */
     public function handle()
     {
         if ($this->collection()) {
-            $this->type = 'Resource collection';
+            $this->type = 'Collection';
         }
 
         parent::handle();
     }
 
-    /**
-     * Get the stub file for the generator.
-     *
-     * @return string
-     */
-    protected function getStub()
+    protected function getStub(): string
     {
         return $this->collection()
             ? $this->resolveStubPath('/stubs/resource/collection.stub')
             : $this->resolveStubPath('/stubs/resource/resource.stub');
     }
 
-    /**
-     * Determine if the command is generating a resource collection.
-     *
-     * @return bool
-     */
-    protected function collection()
+    protected function collection(): bool
     {
-        return $this->option('collection') ||
-            Str::endsWith($this->argument('name'), 'Collection');
-    }
-
-    /**
-     * Resolve the fully-qualified path to the stub.
-     *
-     * @param string $stub
-     * @return string
-     */
-    protected function resolveStubPath($stub)
-    {
-        return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
-            ? $customPath
-            : __DIR__ . $stub;
-    }
-
-    /**
-     * Get the default namespace for the class.
-     *
-     * @param string $rootNamespace
-     * @return string
-     */
-    protected function getDefaultNamespace($rootNamespace)
-    {
-        return $rootNamespace . '\Http\Resources';
+        return $this->option('collection') || Str::endsWith($this->argument('name'), 'Collection');
     }
 
     protected function buildClass($name)
     {
-        if (!($model = $this->option('model'))) {
-            $suffix = $this->type;
-            $baseLen = strlen($suffix);
-            $baseName = class_basename($name);
-            if (strlen($baseName) > $baseLen && str_ends_with($baseName, $suffix)) {
-                $model = substr($baseName, 0, -$baseLen);
-            } else {
-                $this->error('Could not guess model name. Please use --model option');
-            }
-        }
+        $model = $this->guessModelName($name);
+        $modelClass = $this->getModelClass($model);
 
-        $modelClass = $this->parseModel($model);
         /** @var Model $modelObject */
         $modelObject = new $modelClass();
         $fields = $modelObject->getVisible();
@@ -136,33 +72,14 @@ class ResourceMakeCommand extends GeneratorCommand
     }
 
     /**
-     * Get the fully-qualified model class name.
-     *
-     * @param string $model
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected function parseModel($model)
-    {
-        if (preg_match('([^A-Za-z0-9_/\\\\])', $model)) {
-            throw new \InvalidArgumentException('Model name contains invalid characters.');
-        }
-
-        return $this->qualifyModel($model);
-    }
-
-    /**
      * Get the console command options.
-     *
-     * @return array
      */
-    protected function getOptions()
+    protected function getOptions(): array
     {
         return [
+            ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
+            ['model', 'm', InputOption::VALUE_REQUIRED, 'Specify Model to use.'],
             ['collection', 'c', InputOption::VALUE_NONE, 'Create a resource collection'],
-            ['force', null, InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['model', null, InputOption::VALUE_REQUIRED, 'Model to use for getting attributes.'],
         ];
     }
 }
