@@ -83,6 +83,13 @@ trait ClassHelper
         return $this->fullClassName($name, 'Controller');
     }
 
+    protected function fullClassPath($name)
+    {
+        $name = Str::replaceFirst($this->baseNamespace(), '', $name);
+        $path = $this->laravel['path'] . '/' . str_replace('\\', '/', $name) . '.php';
+        return str_replace('//', '/', $path);
+    }
+
     protected function fullViewPath($name, $viewPrefix, $type): string
     {
         $name = strtolower($name);

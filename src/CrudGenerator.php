@@ -16,7 +16,7 @@ class CrudGenerator extends Command
      *
      * @var string
      */
-    protected $name = 'crud:generate';
+    protected $name = 'crud:all';
 
     /**
      * The console command description.
@@ -27,11 +27,8 @@ class CrudGenerator extends Command
 
     private function classExists($className): bool
     {
-        try {
-            return class_exists($className);
-        } catch (\Exception $ex) {
-            return false;
-        }
+        $path = $this->fullClassPath($className);
+        return file_exists($path);
     }
 
     public function handle()
@@ -50,25 +47,29 @@ class CrudGenerator extends Command
         echo "Creating CRUD for '$modelClass' using '$table' table\n";
 
         // Generate Model
-        if (!$this->classExists($modelClass) || $this->confirm("$modelClass already exists. Do you want to overwrite it?", false)) {
+        $classPath = $this->fullClassPath($modelClass);
+        if (!file_exists($classPath) || $this->confirm("$modelClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:model', ['name' => $modelClass, '--table' => $table, '--force' => true]);
         }
 
         // Generate Request
         $requestClass = $this->fullRequestClass("{$modelBaseName}Request");
-        if (!$this->classExists($requestClass) || $this->confirm("$requestClass already exists. Do you want to overwrite it?", false)) {
+        $classPath = $this->fullClassPath($requestClass);
+        if (!file_exists($classPath) || $this->confirm("$requestClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:request', ['name' => $requestClass, '--model' => $modelClass, '--force' => true]);
         }
 
         // Generate Resource
         $resourceClass = $this->fullResourceClass("{$modelBaseName}Resource");
-        if (!$this->classExists($resourceClass) || $this->confirm("$resourceClass already exists. Do you want to overwrite it?", false)) {
+        $classPath = $this->fullClassPath($resourceClass);
+        if (!file_exists($classPath) || $this->confirm("$resourceClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
         }
 
         // Generate Controller
         $controllerClass = $this->fullControllerClass("{$modelBaseName}Controller");
-        if (!$this->classExists($controllerClass) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
+        $classPath = $this->fullClassPath($controllerClass);
+        if (!file_exists($classPath) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true]);
         }
 
