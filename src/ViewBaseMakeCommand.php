@@ -27,9 +27,7 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
     protected final function getPath($name): string
     {
         $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        $path = $this->fullViewPath($name, $viewPrefix, $this->viewType);
-        die("$name, $viewPrefix, $this->viewType, $path\n");
-        return $path;
+        return $this->fullViewPath($name, $viewPrefix, $this->viewType);
     }
 
     protected final function buildClass($name)

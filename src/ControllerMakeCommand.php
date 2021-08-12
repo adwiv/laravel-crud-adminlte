@@ -63,9 +63,8 @@ class ControllerMakeCommand extends GeneratorCommand
         $parentModelClass = $this->fullModelClass($parent);
 
         if (!class_exists($parentModelClass)) {
-            if ($this->confirm("A {$parentModelClass} model does not exist. Do you want to generate it?", true)) {
-                $this->call('make:model', ['name' => $parentModelClass]);
-            }
+            $this->error("{$parentModelClass} model does not exist.");
+            die();
         }
 
         return [
