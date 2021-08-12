@@ -22,7 +22,9 @@ class {{ class }} extends Controller
     {
         ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         ${{ modelVariable }} = null;
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.store', ${{ parentModelVariable }}Id);
+        $referrer = old('_referrer', url()->previous());
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function store({{ model }}Request $request, ${{ parentModelVariable }}Id)
@@ -53,8 +55,9 @@ class {{ class }} extends Controller
     public function edit(${{ modelVariable }}Id)
     {
         ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
-
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.update', ${{ modelVariable }}Id);
+        $referrer = old('_referrer', url()->previous());
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function update({{ model }}Request $request, ${{ modelVariable }}Id)

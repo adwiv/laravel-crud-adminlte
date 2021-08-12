@@ -23,7 +23,7 @@ class ModelMakeCommand extends GeneratorCommand
 
     protected function buildClass($name)
     {
-        $modelClass = $this->getModelClass($name);
+        $modelClass = $this->fullModelClass($name);
 
         if (!($table = $this->option('table'))) {
             $table = Str::snake(Str::pluralStudly(class_basename($name)));
@@ -52,13 +52,18 @@ class ModelMakeCommand extends GeneratorCommand
     {
         return self::where('$field', \$$findVariable)->first();
     }
-";
+
+    public function {$findMethod}OrFail(\$$findVariable)
+    {
+        return self::where('$field', \$$findVariable)->firstOrFail();
+    }";
             }
 
             if ($column->foreign) {
                 list($foreignTable, $foreignKey) = explode(',', $column->foreign);
                 $relation = Str::singular($foreignTable);
                 $relationClass = Str::studly($relation);
+                $IMPORTS .= "use " . $this->fullModelClass($relationClass) . ";\n";
 
                 $BELONGS .= "
     public function $relation()
@@ -81,6 +86,7 @@ class ModelMakeCommand extends GeneratorCommand
             $oneOrMany = $relation['unique'] ? 'hasOne' : 'hasMany';
             $relation = Str::singular($foreignTable);
             $relationClass = Str::studly($relation);
+            $IMPORTS .= "use " . $this->fullModelClass($relationClass) . ";\n";
 
             $HASMANY .= "
     public function $relation()

@@ -1,14 +1,6 @@
 @extends('layouts.adminlte')
 
-@section('title', "$createOrEdit {{ model }}")
-
-@section('content_header')
-    <div class="row">
-        <div class="col-md-6">
-            <h1 class="m-0 text-dark">{{ $createOrEdit }} {{ model }}</h1>
-        </div>
-    </div>
-@stop
+@section('title', ${{ modelVariable }} ? 'Update {{ model }}' : 'Create {{ model }}')
 
 @section('content_header')
     <div class="row align-items-center">
@@ -17,9 +9,11 @@
                 <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}home')}}">Home</a></li>
                 <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.index')}}">{{ pluralModel }}</a></li>
                 @if(${{ modelVariable }})
-                    <li class="breadcrumb-item active"><a href="{{route('admin.{{ pluralModelVariable }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+                    <li class="breadcrumb-item active">Edit {{ model }}</li>
+                @else
+                    <li class="breadcrumb-item active">Create {{ model }}</li>
                 @endif
-                <li class="breadcrumb-item active">{{ ${{ modelVariable }} ? 'Edit {{ model }}' : 'Create {{ model }}' }}</li>
             </ol>
         </div>
         <div class="col text-right">
@@ -28,42 +22,47 @@
 @stop
 
 @section('content')
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title text-lg">{{ ${{ modelVariable }} ? 'Edit {{ model }}' : 'Create {{ model }}' }}</div>
-            <div class="card-tools">
-            </div>
-        </div>
-
-        <div class="card-body">
-            @if ($errors->any())
-                <div class="alert alert-warning">
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+    <form method="post" class="needs-validation" novalidate autocomplete="off" action="{{ $action }}">
+        @if (${{ modelVariable }}) @method('PUT') @endif
+        @csrf
+        <input type="hidden" name="_referrer" value="{{ $referrer }}">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title text-lg">{{ ${{ modelVariable }} ? 'Edit {{ model }}' : 'Create {{ model }}' }}</div>
+                <div class="text-right">
+                    <input type="reset" value="Reset" class="btn btn-sm btn-outline-warning">
                 </div>
-            @endif
+            </div>
 
-            <form method="post" class="needs-validation" novalidate autocomplete="off" action="{{ $action }}">
-                @if (${{ modelVariable }}) @method('PUT') @endif
-                @csrf
+            <div class="card-body">
+                @if ($errors->any())
+                    <div class="alert alert-warning">
+                        <ul class="py-0 my-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <div class="row">
                     {{ FIELDS }}
                 </div>
+            </div>
+            <div class="card-footer">
                 <div class="row">
-                    <div class="col-sm-6">
-                        <input type="reset" value="Reset" class="btn btn-outline-warning">
+                    <div class="col-sm-4">
+                        <a class="btn btn-link pl-0" href="{{ $referrer }}">&laquo; Back</a>
                     </div>
-                    <div class="col-sm-6 text-right">
+                    <div class="col-sm-4 text-center">
+                    </div>
+                    <div class="col-sm-4 text-right">
                         <input type="submit" value="{{ ${{ modelVariable }} ? 'Update {{ model }}' : 'Create {{ model }}' }}" class="btn btn-info">
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 @stop
 
 @push('js')

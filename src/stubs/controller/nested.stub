@@ -22,7 +22,9 @@ class {{ class }} extends Controller
     {
         ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         ${{ modelVariable }} = null;
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.store', ${{ parentModelVariable }}Id);
+        $referrer = old('_referrer', url()->previous());
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function store({{ model }}Request $request, ${{ parentModelVariable }}Id)
@@ -56,9 +58,11 @@ class {{ class }} extends Controller
     {
         ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.store', [${{ parentModelVariable }}Id, ${{ modelVariable }}Id]);
         if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+        $referrer = old('_referrer', url()->previous());
 
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function update({{ model }}Request $request, ${{ parentModelVariable }}Id, ${{ modelVariable }}Id)

@@ -3,40 +3,51 @@
 @section('title', '{{ model }} List')
 
 @section('content_header')
-    <div class="row">
-        <div class="col-md-6">
-            <h1 class="m-0 text-dark">{{ model }} List</h1>
+    <div class="row align-items-center">
+        <div class="col">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}home')}}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.index')}}">{{ pluralModel }}</a></li>
+            </ol>
+        </div>
+        <div class="col text-right">
         </div>
     </div>
 @stop
 
 @section('content')
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive mt-2">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                            <tr>
-                                {{ HEAD }}
-                            </tr>
-                            </thead>
-                            <tbody class="text-sm">
-                            @forelse(${{ pluralModelVariable }} as ${{ modelVariable }})
-                                <tr>
-                                    {{ BODY }}
-                                </tr>
-                            @empty
-                                <tr>
-                                    {{ EMPTY }}
-                                </tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title text-lg">{{ model }} List</div>
+            <div class="card-tools">
             </div>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover">
+                <thead class="text-sm">
+                <tr>
+                    {{ HEAD }}
+                    <td>&nbsp;</td>
+                </tr>
+                </thead>
+                <tbody class="text-sm">
+                @forelse(${{ pluralModelVariable }} as ${{ modelVariable }})
+                    <tr>
+                        {{ BODY }}
+                        <td>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }}) }}" class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
+                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }}) }}" class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        {{ EMPTY }}
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
     {{-- // pagination --}}

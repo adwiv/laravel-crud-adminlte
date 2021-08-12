@@ -66,13 +66,11 @@ class ColumnInfo
                 return 'boolean';
             case 'date':
             case 'date_immutable':
-                return 'date';
             case 'datetime':
             case 'datetime_immutable':
-                return 'datetime';
             case 'time':
             case 'time_immutable':
-                return 'time';
+                return 'date';
             case 'array':
             case 'simple_array':
             case 'json':

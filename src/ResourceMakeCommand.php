@@ -3,7 +3,6 @@
 namespace Adwiv\Laravel\CrudGenerator;
 
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -39,23 +38,12 @@ class ResourceMakeCommand extends GeneratorCommand
     protected function buildClass($name)
     {
         $model = $this->guessModelName($name);
-        $modelClass = $this->getModelClass($model);
+        $modelClass = $this->fullModelClass($model);
+        $fields = $this->getVisibleFields($modelClass);
 
-        /** @var Model $modelObject */
-        $modelObject = new $modelClass();
-        $fields = $modelObject->getVisible();
-        $hidden = $modelObject->getHidden();
-        if (empty($fields)) {
-            $table = $modelObject->getTable();
-            $columns = ColumnInfo::fromTable($table);
-            $fields = array_keys($columns);
-        }
         $FIELDS = "";
-
         foreach ($fields as $field) {
-            if (!in_array($field, $hidden)) {
-                $FIELDS .= "            '$field' => \$this->$field,\n";
-            }
+            $FIELDS .= "            '$field' => \$this->$field,\n";
         }
 
         $replace = [

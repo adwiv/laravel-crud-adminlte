@@ -60,7 +60,7 @@ class ControllerMakeCommand extends GeneratorCommand
      */
     protected function buildParentReplacements($parent): array
     {
-        $parentModelClass = $this->getModelClass($parent);
+        $parentModelClass = $this->fullModelClass($parent);
 
         if (!class_exists($parentModelClass)) {
             if ($this->confirm("A {$parentModelClass} model does not exist. Do you want to generate it?", true)) {
@@ -81,7 +81,7 @@ class ControllerMakeCommand extends GeneratorCommand
      */
     protected function buildModelReplacements(array $replace, string $model): array
     {
-        $modelClass = $this->getModelClass($model);
+        $modelClass = $this->fullModelClass($model);
 
         if (!class_exists($modelClass)) {
             if ($this->confirm("A {$modelClass} model does not exist. Do you want to generate it?", true)) {

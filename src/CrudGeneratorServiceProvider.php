@@ -31,6 +31,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
                 CrudGenerator::class,
                 ViewIndexMakeCommand::class,
                 ViewEditMakeCommand::class,
+                ViewShowMakeCommand::class,
             ]);
         }
     }

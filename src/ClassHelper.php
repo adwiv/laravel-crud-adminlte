@@ -2,6 +2,7 @@
 
 namespace Adwiv\Laravel\CrudGenerator;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
@@ -14,20 +15,26 @@ trait ClassHelper
         return trim($this->laravel->getNamespace(), '\\');
     }
 
+    protected function defaultNamespace($rootNamespace, $type = null): string
+    {
+        $type = $type ?? $this->type;
+        if ($type == 'Request') return $rootNamespace . '\Http\Requests';
+        if ($type == 'Resource') return $rootNamespace . '\Http\Resources';
+        if ($type == 'Collection') return $rootNamespace . '\Http\Resources';
+        if ($type == 'Controller') return $rootNamespace . '\Http\Controllers';
+        if ($type == 'Model') return is_dir(app_path('Models')) ? $rootNamespace . '\Models' : $rootNamespace;
+        throw new \InvalidArgumentException("Unknown class type '$this->type'.");
+    }
+
     protected function getDefaultNamespace($rootNamespace)
     {
-        if ($this->type == 'Request') return $rootNamespace . '\Http\Requests';
-        if ($this->type == 'Resource') return $rootNamespace . '\Http\Resources';
-        if ($this->type == 'Collection') return $rootNamespace . '\Http\Resources';
-        if ($this->type == 'Controller') return $rootNamespace . '\Http\Controllers';
-        if ($this->type == 'Model') return is_dir(app_path('Models')) ? $rootNamespace . '\Models' : $rootNamespace;
-        throw new \InvalidArgumentException("Unknown class type '$this->type'.");
+        return $this->defaultNamespace($rootNamespace);
     }
 
     /**
      * Parse the class name and format according to the root namespace.
      */
-    private function fullClassName(string $name): string
+    private function fullClassName(string $name, $type = null): string
     {
         $name = ltrim($name, '\\/');
 
@@ -37,43 +44,52 @@ trait ClassHelper
 
         if (Str::startsWith($name, $baseNamespace)) return $name;
 
-        return $this->fullClassName($this->getDefaultNamespace($baseNamespace) . '\\' . $name);
+        return $this->fullClassName($this->defaultNamespace($baseNamespace, $type) . '\\' . $name, $type);
     }
 
     /**
      * Get the fully-qualified model class name.
      */
-    protected function getModelClass(string $model): string
+    protected function fullModelClass(string $model): string
     {
         $this->checkClassName($model);
-        return $this->fullClassName($model, 'model');
+        return $this->fullClassName($model, 'Model');
     }
 
     /**
      * Get the fully-qualified request class name.
      */
-    protected function getRequestClass($name): string
+    protected function fullRequestClass($name): string
     {
         $this->checkClassName($name);
-        return $this->fullClassName($name, 'request');
+        return $this->fullClassName($name, 'Request');
     }
 
     /**
      * Get the fully-qualified resource class name.
      */
-    protected function getResourceClass($name): string
+    protected function fullResourceClass($name): string
     {
         $this->checkClassName($name);
-        return $this->fullClassName($name, 'resource');
+        return $this->fullClassName($name, 'Resource');
     }
 
     /**
      * Get the fully-qualified controller class name.
      */
-    protected function getControllerClass($name): string
+    protected function fullControllerClass($name): string
     {
         $this->checkClassName($name);
-        return $this->fullClassName($name, 'controller');
+        return $this->fullClassName($name, 'Controller');
+    }
+
+    protected function fullViewPath($name, $viewPrefix, $type): string
+    {
+        $name = strtolower($name);
+        $dir = $this->laravel->resourcePath('views');
+        $path = str_replace('.', '/', "$viewPrefix.$name");
+        $path = str_replace('//', '/', "/$path");
+        return "$dir$path-$type.blade.php";
     }
 
     /**
@@ -103,8 +119,30 @@ trait ClassHelper
                 $model = substr($baseName, 0, -$baseLen);
             } else {
                 $this->error('Could not guess model name. Please use --model option');
+                die();
             }
         }
         return $model;
+    }
+
+    protected function getVisibleFields($modelClass, array $ignore = []): array
+    {
+        /** @var Model $modelObject */
+        $modelObject = new $modelClass();
+        $visible = [];
+        $fields = $modelObject->getVisible();
+        $hidden = $modelObject->getHidden();
+        if (empty($fields)) {
+            $table = $modelObject->getTable();
+            $columns = ColumnInfo::fromTable($table);
+            $fields = array_keys($columns);
+        }
+
+        foreach ($fields as $field) {
+            if (!in_array($field, $hidden) && !in_array($field, $ignore)) {
+                $visible[] = $field;
+            }
+        }
+        return $visible;
     }
 }

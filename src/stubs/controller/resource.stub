@@ -19,7 +19,9 @@ class {{ class }} extends Controller
     public function create()
     {
         ${{ modelVariable }} = null;
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}'));
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.store');
+        $referrer = old('_referrer', url()->previous());
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
     public function store({{ model }}Request $request)
@@ -46,7 +48,9 @@ class {{ class }} extends Controller
     public function edit($id)
     {
         ${{ modelVariable }} = {{ model }}::findOrFail($id);
-        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}'));
+        $action = route('{{ routePrefix }}{{ pluralModelVariable }}.update', $id);
+        $referrer = old('_referrer', url()->previous());
+        return view('{{ viewPrefix }}{{ modelVariable }}-edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
     public function update({{ model }}Request $request, $id)

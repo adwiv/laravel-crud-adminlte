@@ -23,7 +23,8 @@ class RequestMakeCommand extends GeneratorCommand
     protected function buildClass($name)
     {
         $model = $this->guessModelName($name);
-        $modelClass = $this->getModelClass($model);
+        $modelClass = $this->fullModelClass($model);
+        echo "Creating Request for ModelClass $modelClass\n";
 
         /** @var Model $modelObject */
         $modelObject = new $modelClass();
@@ -34,7 +35,8 @@ class RequestMakeCommand extends GeneratorCommand
         $RULES = "";
         $MESSAGES = "";
         foreach (array_keys($columns) as $field) {
-            if (in_array($field, ['id', 'uid', 'uuid', 'remember_token', 'deleted_at', 'updated_at', 'created_at'])) continue;
+            $ignore = ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
+            if (in_array($field, $ignore)) continue;
 
             if ($modelObject->isFillable($field)) {
                 $fillable[] = $field;

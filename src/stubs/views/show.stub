@@ -1,0 +1,35 @@
+@extends('layouts.adminlte')
+
+@section('title', '{{ model }} Details')
+
+@section('content_header')
+    <div class="row align-items-center">
+        <div class="col">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}home')}}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.index')}}">{{ pluralModel }}</a></li>
+                <li class="breadcrumb-item active"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+            </ol>
+        </div>
+        <div class="col text-right">
+        </div>
+    </div>
+@stop
+
+@section('content')
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title text-lg">{{ model }} Details</div>
+                <div class="card-tools">
+                    <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }})}}">Edit</a>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover">
+                    {{ FIELDS }}
+                </table>
+            </div>
+        </div>
+    </div>
+@stop
