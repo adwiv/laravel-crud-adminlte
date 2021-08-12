@@ -19,7 +19,8 @@
     <div class="card">
         <div class="card-header">
             <div class="card-title text-lg">{{ model }} List</div>
-            <div class="card-tools">
+            <div class="card-tools mr-0">
+                <a class="btn btn-sm btn-outline-success" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.create')}}">Create {{ model }}</a>
             </div>
         </div>
         <div class="card-body p-0">
