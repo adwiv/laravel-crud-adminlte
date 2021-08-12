@@ -24,7 +24,6 @@ class RequestMakeCommand extends GeneratorCommand
     {
         $model = $this->guessModelName($name);
         $modelClass = $this->fullModelClass($model);
-        echo "Creating Request for ModelClass $modelClass\n";
 
         /** @var Model $modelObject */
         $modelObject = new $modelClass();
