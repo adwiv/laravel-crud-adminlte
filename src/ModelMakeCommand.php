@@ -25,8 +25,11 @@ class ModelMakeCommand extends GeneratorCommand
     {
         $modelClass = $this->fullModelClass($name);
 
+        $TABLE = "";
         if (!($table = $this->option('table'))) {
             $table = Str::snake(Str::pluralStudly(class_basename($name)));
+        } else {
+            $TABLE = "\n    protected \$table = '$table';\n";
         }
 
         $columns = ColumnInfo::fromTable($table);
@@ -106,6 +109,7 @@ class ModelMakeCommand extends GeneratorCommand
             '{{ IMPORTS }}' => trim($IMPORTS),
             '{{ UNIQUES }}' => trim($UNIQUES),
             '{{ HASMANY }}' => trim($HASMANY),
+            '{{ TABLE }}' => ($TABLE),
         ];
 
         return str_replace(
