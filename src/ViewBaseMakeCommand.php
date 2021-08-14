@@ -69,7 +69,7 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
         $files = ["adminlte.blade.php"];
         foreach ($files as $file) {
             if (!file_exists("$dir$file"))
-                copy($this->resolveStubPath("/stubs/views/scripts/$file"), "$dir$file");
+                copy($this->resolveStubPath("/stubs/views/layouts/$file"), "$dir$file");
         }
     }
 
