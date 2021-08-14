@@ -24,9 +24,6 @@ class ViewEditMakeCommand extends ViewBaseMakeCommand
 
     protected function buildViewReplacements($modelClass, $fields): array
     {
-        // Copy the scripts for use in file
-        $this->copyBladeScripts();
-
         $FIELDS = "";
         $modelVariable = lcfirst(class_basename($modelClass));
         foreach ($fields as $field) {
@@ -46,6 +43,8 @@ class ViewEditMakeCommand extends ViewBaseMakeCommand
      */
     protected function copyBladeScripts()
     {
+        parent::copyBladeScripts();
+
         $dir = $this->laravel->resourcePath('views/scripts/');
         if (!file_exists($dir)) mkdir($dir);
         $files = ["form-slugify.blade.php", "form-validate.blade.php"];

@@ -36,6 +36,8 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
             $model = Str::studly(class_basename(str_replace('.', '/', $name)));
         }
 
+        $this->copyBladeScripts();
+
         $modelClass = $this->fullModelClass($model);
         $ignore = ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         $fields = $this->getVisibleFields($modelClass, $ignore);
@@ -55,6 +57,20 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
         return str_replace(
             array_keys($replace), array_values($replace), parent::buildClass($name)
         );
+    }
+
+    /**
+     * Copy the script stubs to view directory
+     */
+    protected function copyBladeScripts()
+    {
+        $dir = $this->laravel->resourcePath('views/layouts/');
+        if (!file_exists($dir)) mkdir($dir);
+        $files = ["adminlte.blade.php"];
+        foreach ($files as $file) {
+            if (!file_exists("$dir$file"))
+                copy($this->resolveStubPath("/stubs/views/scripts/$file"), "$dir$file");
+        }
     }
 
     protected abstract function buildViewReplacements($modelClass, $fields): array;
