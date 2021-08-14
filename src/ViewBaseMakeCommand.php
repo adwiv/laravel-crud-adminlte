@@ -49,7 +49,7 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
                 '{{ modelVariable }}' => lcfirst(class_basename($modelClass)),
                 '{{ pluralModel }}' => Str::plural(class_basename($modelClass)),
                 '{{ pluralModelVariable }}' => Str::plural(lcfirst(class_basename($modelClass))),
-                '{{ routePrefix }}' => $this->option('route-prefix') ?? $this->option('prefix') ?? '',
+                '{{ routePrefix }}' => $this->prefixWithDot($this->option('route-prefix') ?? $this->option('prefix') ?? ''),
             ],
             $this->buildViewReplacements($modelClass, $fields)
         );

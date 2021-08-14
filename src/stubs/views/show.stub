@@ -17,19 +17,18 @@
 @stop
 
 @section('content')
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title text-lg">{{ model }} Details</div>
-                <div class="card-tools mr-0">
-                    <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
-                </div>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title text-lg">{{ model }} Details</div>
+            <div class="card-tools mr-0">
+                <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
             </div>
+        </div>
 
-            <div class="card-body p-0">
-                <table class="table table-sm table-hover">
-                    {{ FIELDS }}
-                </table>
-            </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover">
+                {{ FIELDS }}
+            </table>
         </div>
     </div>
 @stop

@@ -66,15 +66,15 @@ class CrudGenerator extends Command
             $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
         }
 
+        $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
+        $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
+
         // Generate Controller
         $controllerClass = $this->fullControllerClass("{$modelBaseName}Controller");
         $classPath = $this->fullClassPath($controllerClass);
         if (!file_exists($classPath) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true]);
+            $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
         }
-
-        $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
 
         // Generate Index View
         $viewName = strtolower($modelBaseName);

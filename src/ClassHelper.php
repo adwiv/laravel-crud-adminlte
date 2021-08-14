@@ -99,6 +99,11 @@ trait ClassHelper
         return "$dir$path-$type.blade.php";
     }
 
+    protected function prefixWithDot($prefix): string
+    {
+        return ($prefix = trim($prefix)) ? str_replace('..', '.', "$prefix.") : '';
+    }
+
     /**
      * Resolve the fully-qualified path to the stub.
      */

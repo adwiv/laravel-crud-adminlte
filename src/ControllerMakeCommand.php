@@ -44,8 +44,11 @@ class ControllerMakeCommand extends GeneratorCommand
 
         $replace = $this->buildModelReplacements($replace, $model);
 
-        $replace['{{ viewPrefix }}'] = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        $replace['{{ routePrefix }}'] = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
+        $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
+        $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
+
+        $replace['{{ viewPrefix }}'] = $this->prefixWithDot($viewPrefix);
+        $replace['{{ routePrefix }}'] = $this->prefixWithDot($routePrefix);
 
         $controllerNamespace = $this->getNamespace($name);
         $replace["use {$controllerNamespace}\Controller;\n"] = '';
