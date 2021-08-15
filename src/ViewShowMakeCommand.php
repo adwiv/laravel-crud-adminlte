@@ -28,7 +28,11 @@ class ViewShowMakeCommand extends ViewBaseMakeCommand
         $modelVariable = lcfirst(class_basename($modelClass));
         foreach ($fields as $field) {
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
-            $FIELDS .= "                    <tr><td>$fieldName</td><td>{{ \$$modelVariable->$field }}</td></tr>\n";
+            $FIELDS .= "
+                <tr>
+                    <td>$fieldName</td>
+                    <td>{{ \$$modelVariable->$field }}</td>
+                </tr>";
         }
 
         return ['{{ FIELDS }}' => trim($FIELDS)];

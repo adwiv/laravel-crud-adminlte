@@ -30,7 +30,7 @@ class ViewEditMakeCommand extends ViewBaseMakeCommand
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
             $FIELDS .=
                 "                    <x-adminlte-input name=\"$field\" label=\"$fieldName\" disable-feedback required\n" .
-                "                                      value=\"{{ old('$field', \$$modelVariable->$field ?? '') }}\" \n" .
+                "                                      value=\"{{ old('$field', \$$modelVariable->$field ?? '') }}\"\n" .
                 "                                      label-class=\"text-sm\" fgroup-class=\"col-sm-6 col-lg-4 col-xl-3\">\n" .
                 "                    </x-adminlte-input>\n";
         }

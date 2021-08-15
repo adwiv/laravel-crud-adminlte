@@ -28,7 +28,7 @@
                 <thead class="text-sm">
                 <tr>
                     {{ HEAD }}
-                    <td>&nbsp;</td>
+                    <th>&nbsp;</th>
                 </tr>
                 </thead>
                 <tbody class="text-sm">
@@ -37,8 +37,10 @@
                         {{ BODY }}
                         <td>
                             <div class="d-flex justify-content-between">
-                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }}) }}" class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
-                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }}) }}" class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
+                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }}) }}"
+                                   class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
+                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }}) }}"
+                                   class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
                             </div>
                         </td>
                     </tr>

@@ -29,11 +29,11 @@ class ViewIndexMakeCommand extends ViewBaseMakeCommand
         $modelVariable = lcfirst(class_basename($modelClass));
         foreach ($fields as $field) {
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
-            $HEAD .= "                                <th class=\"\">$fieldName</th>\n";
-            $BODY .= "                                    <td class=\"\">{{ \$$modelVariable->$field }}</td>\n";
+            $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
+            $BODY .= "                        <td class=\"\">{{ \$$modelVariable->$field }}</td>\n";
             $count++;
         }
-        $EMPTY = "                                    <td colspan=\"$count\" class=\"text-center\">No records found</td>";
+        $EMPTY = "                        <td colspan=\"$count\" class=\"text-center\">No records found</td>";
 
         return [
             '{{ HEAD }}' => trim($HEAD),
