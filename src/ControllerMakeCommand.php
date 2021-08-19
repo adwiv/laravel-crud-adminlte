@@ -87,15 +87,42 @@ class ControllerMakeCommand extends GeneratorCommand
 
         if (!class_exists($modelClass)) {
             if ($this->confirm("A {$modelClass} model does not exist. Do you want to generate it?", true)) {
-                $this->call('make:model', ['name' => $modelClass]);
+                $this->call('crud:model', ['name' => $modelClass]);
             }
         }
+
+        $modelObject = new $modelClass();
+        $table = $modelObject->getTable();
+        $columns = ColumnInfo::fromTable($table);
+
+        $needsProcessing = false;
+        $CALL_PROCESS_INPUT = "\n        \$fields = \$this->processInput(\$fields);";
+        $PROCESS_INPUT = "
+
+    private function processInput(array \$fields)
+    {
+";
+        foreach ($columns as $field => $column) {
+            if (in_array($field, ['id', 'uid', 'uuid', 'remember_token', 'deleted_at', 'updated_at', 'created_at'])) continue;
+            if ($column->castType() == 'datetime') {
+                $needsProcessing = true;
+                $PROCESS_INPUT .= "        \$date = \$fields['$field']['date'] ?? null;\n";
+                $PROCESS_INPUT .= "        \$time = \$fields['$field']['time'] ?? null;\n";
+                $PROCESS_INPUT .= "        \$fields['$field'] = \$date ? (\$time ? \"\$date \$time\" : \"\$date\") : null;\n\n";
+            }
+        }
+
+        $PROCESS_INPUT .= "        return \$fields;
+    }";
+
 
         return array_merge($replace, [
             '{{ namespacedModel }}' => $modelClass,
             '{{ model }}' => class_basename($modelClass),
             '{{ modelVariable }}' => lcfirst(class_basename($modelClass)),
             '{{ pluralModelVariable }}' => Str::plural(lcfirst(class_basename($modelClass))),
+            '{{ PROCESS_INPUT }}' => $needsProcessing ? $PROCESS_INPUT : '',
+            '{{ CALL_PROCESS_INPUT }}' => $needsProcessing ? $CALL_PROCESS_INPUT : '',
         ]);
     }
 

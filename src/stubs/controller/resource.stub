@@ -26,7 +26,7 @@ class {{ class }} extends Controller
 
     public function store({{ model }}Request $request)
     {
-        $fields = $request->validated();
+        $fields = $request->validated();{{ CALL_PROCESS_INPUT }}
         try {
             {{ model }}::create($fields);
         } catch (Exception $e) {
@@ -56,7 +56,7 @@ class {{ class }} extends Controller
     public function update({{ model }}Request $request, $id)
     {
         ${{ modelVariable }} = {{ model }}::findOrFail($id);
-        $fields = $request->validated();
+        $fields = $request->validated();{{ CALL_PROCESS_INPUT }}
         try {
             ${{ modelVariable }}->update($fields);
         } catch (Exception $e) {
@@ -79,5 +79,5 @@ class {{ class }} extends Controller
         }
 
         return redirect()->back()->with('success', '{{ model }} deleted successfully');
-    }
+    }{{ PROCESS_INPUT }}
 }

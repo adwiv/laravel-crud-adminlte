@@ -42,7 +42,7 @@ class ResourceMakeCommand extends GeneratorCommand
         $fields = $this->getVisibleFields($modelClass);
 
         $FIELDS = "";
-        foreach ($fields as $field) {
+        foreach ($fields as $field => $columnInfo) {
             $FIELDS .= "            '$field' => \$this->$field,\n";
         }
 

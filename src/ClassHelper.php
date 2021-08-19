@@ -144,15 +144,16 @@ trait ClassHelper
         $visible = [];
         $fields = $modelObject->getVisible();
         $hidden = $modelObject->getHidden();
+
+        $table = $modelObject->getTable();
+        $columns = ColumnInfo::fromTable($table);
         if (empty($fields)) {
-            $table = $modelObject->getTable();
-            $columns = ColumnInfo::fromTable($table);
             $fields = array_keys($columns);
         }
 
         foreach ($fields as $field) {
             if (!in_array($field, $hidden) && !in_array($field, $ignore)) {
-                $visible[] = $field;
+                $visible[$field] = $columns[$field];
             }
         }
         return $visible;

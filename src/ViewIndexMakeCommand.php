@@ -27,7 +27,7 @@ class ViewIndexMakeCommand extends ViewBaseMakeCommand
         $count = 0;
         $HEAD = $BODY = "";
         $modelVariable = lcfirst(class_basename($modelClass));
-        foreach ($fields as $field) {
+        foreach ($fields as $field => $columnInfo) {
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
             $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
             $BODY .= "                        <td class=\"\">{{ \$$modelVariable->$field }}</td>\n";

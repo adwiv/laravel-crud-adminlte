@@ -26,7 +26,7 @@ class ViewShowMakeCommand extends ViewBaseMakeCommand
     {
         $FIELDS = "";
         $modelVariable = lcfirst(class_basename($modelClass));
-        foreach ($fields as $field) {
+        foreach ($fields as $field => $columnInfo) {
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
             $FIELDS .= "
                 <tr>

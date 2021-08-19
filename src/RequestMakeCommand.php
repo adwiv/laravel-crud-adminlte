@@ -42,13 +42,21 @@ class RequestMakeCommand extends GeneratorCommand
                 /** @var ColumnInfo $column */
                 $column = $columns[$field];
                 $required = $column->notNull ? 'required' : 'nullable';
-                $type = $column->validationType();
-                $min = $column->unsigned ? '|min:0' : '';
-                $max = $column->length > 0 ? '|max:' . $column->length : '';
-                $unique = $column->unique ? "|unique:$table,$field{\$ignoreId}" : '';
-                $exists = $column->foreign ? "|exists:$column->foreign" : '';
-                $RULES .= "            '$field' => \"$required|$type$min$max$unique$exists\",\n";
-                $MESSAGES .= "            //'$field' => '',\n";
+                if($column->castType() == 'datetime') {
+                    $RULES .= "            '$field' => \"$required|array|\",\n";
+                    $RULES .= "            '$field.date' => \"$required|date_format:Y-m-d|\",\n";
+                    $RULES .= "            '$field.time' => \"$required:$field.date|date_format:H:i:s|\",\n";
+                    $MESSAGES .= "            //'$field' => '',\n";
+                } else {
+                    $type = $column->validationType();
+                    $min = $column->unsigned ? '|min:0' : '';
+                    $max = $column->length > 0 ? '|max:' . $column->length : '';
+                    $exists = $column->foreign ? "|exists:$column->foreign" : '';
+                    $unique = $column->unique ? "|unique:$table,$field{\$ignoreId}" : '';
+                    $values = $column->type == 'enum' ? '|in:xxx,yyy,zzz' : '';
+                    $RULES .= "            '$field' => \"$required|$type$min$max$unique$exists$values\",\n";
+                    $MESSAGES .= "            //'$field' => '',\n";
+                }
             }
         }
 
