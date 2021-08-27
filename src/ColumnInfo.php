@@ -8,6 +8,7 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ColumnInfo
 {
@@ -22,6 +23,7 @@ class ColumnInfo
     public $notNull;
     public $unique;
     public $foreign;
+    public $values;
 
     public static function init()
     {
@@ -44,6 +46,10 @@ class ColumnInfo
         $this->notNull = $column->getNotnull();
         $this->unique = in_array($this->name, $uniques);
         $this->foreign = $foreign[$this->name] ?? null;
+
+        if ($this->type == 'enum') {
+
+        }
     }
 
     public function validationType()
@@ -127,7 +133,13 @@ class ColumnInfo
             }
         }
         foreach ($tableInfo->getColumns() as $column) {
-            $columns[$column->getName()] = new ColumnInfo($column, $uniques, $foreign);
+            $columnName = $column->getName();
+            $columnInfo = new ColumnInfo($column, $uniques, $foreign);
+            $columnType = $columnInfo->type;
+            $columns[$columnName] = $columnInfo;
+            if ($columnType == 'enum' || $columnType == 'set') {
+                $columnInfo->values = self::getEnumValues($table, $columnName, $columnType);
+            }
         }
         return $columns;
     }
@@ -154,6 +166,16 @@ class ColumnInfo
             }
         }
         return $keys;
+    }
+
+    private static function getEnumValues($table, $field, $type): array
+    {
+        $data = DB::select(DB::raw("show columns from {$table} where field = '{$field}'"));
+        if (!is_array($data)) die("$type field data is not an array");
+        if (!isset($data[0])) die("$type field data is empty array");
+        if (!isset($data[0]->Type)) die("$type field data is invalid");
+        if (!preg_match('/^enum\((.*)\)$/', $data[0]->Type, $matches)) die("Invalid $type value");
+        return str_getcsv($matches[1], ',', "'");
     }
 }
 

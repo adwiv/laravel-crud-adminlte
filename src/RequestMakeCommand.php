@@ -42,7 +42,7 @@ class RequestMakeCommand extends GeneratorCommand
                 /** @var ColumnInfo $column */
                 $column = $columns[$field];
                 $required = $column->notNull ? 'required' : 'nullable';
-                if($column->castType() == 'datetime') {
+                if ($column->castType() == 'datetime') {
                     $RULES .= "            '$field' => \"$required|array|\",\n";
                     $RULES .= "            '$field.date' => \"$required|date_format:Y-m-d|\",\n";
                     $RULES .= "            '$field.time' => \"$required:$field.date|date_format:H:i:s|\",\n";
@@ -53,7 +53,7 @@ class RequestMakeCommand extends GeneratorCommand
                     $max = $column->length > 0 ? '|max:' . $column->length : '';
                     $exists = $column->foreign ? "|exists:$column->foreign" : '';
                     $unique = $column->unique ? "|unique:$table,$field{\$ignoreId}" : '';
-                    $values = $column->type == 'enum' ? '|in:xxx,yyy,zzz' : '';
+                    $values = $column->type == 'enum' ? '|in:' . implode(',', $column->values) . '' : '';
                     $RULES .= "            '$field' => \"$required|$type$min$max$unique$exists$values\",\n";
                     $MESSAGES .= "            //'$field' => '',\n";
                 }
