@@ -71,7 +71,7 @@ class ModelMakeCommand extends GeneratorCommand
                 $BELONGS .= "
     public function $relation()
     {
-        return \$this->belongsTo($relationClass::class, '$foreignKey', '$field');
+        return \$this->belongsTo($relationClass::class, '$field', '$foreignKey');
     }
 ";
             }
