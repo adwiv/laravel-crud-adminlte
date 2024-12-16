@@ -1,21 +1,15 @@
 <?php
+
 /** @noinspection PhpMultipleClassesDeclarationsInOneFile */
 
 namespace Adwiv\Laravel\CrudGenerator;
 
-use Doctrine\DBAL\Exception;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Schema\Column;
-use Doctrine\DBAL\Types\Type;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ColumnInfo
 {
-    private static $inited;
-    private static $schema;
-    private static $databasePlatform;
-
     public $name;
     public $type;
     public $length;
@@ -25,31 +19,36 @@ class ColumnInfo
     public $foreign;
     public $values;
 
-    public static function init()
+    public function __construct(array $column, array $uniques, array $foreign)
     {
-        self::$inited = true;
-        Type::addType('set', SetType::class);
-        Type::addType('enum', EnumType::class);
-
-        self::$schema = DB::getDoctrineSchemaManager();
-        self::$databasePlatform = self::$schema->getDatabasePlatform();
-        self::$databasePlatform->registerDoctrineTypeMapping('set', 'set');
-        self::$databasePlatform->registerDoctrineTypeMapping('enum', 'enum');
-    }
-
-    public function __construct(Column $column, array $uniques, array $foreign)
-    {
-        $this->name = $column->getName();
-        $this->type = $column->getType()->getName();
-        $this->length = $column->getLength() ?? 0;
-        $this->unsigned = $column->getUnsigned();
-        $this->notNull = $column->getNotnull();
+        $this->name = $column['name'];
+        $this->type = $column['type_name'];
+        $this->length = $this->extractFieldLength($column['type']);
+        $this->unsigned = str_contains($column['type'], 'unsigned');
+        $this->notNull = $column['nullable'] === false;
         $this->unique = in_array($this->name, $uniques);
         $this->foreign = $foreign[$this->name] ?? null;
 
-        if ($this->type == 'enum') {
-
+        if ($this->type == 'enum' || $this->type == 'set') {
+            $this->values = self::getEnumValues($this->type, $column['type']);
         }
+    }
+
+    private static function extractFieldLength($type): int
+    {
+        // Use preg_match to extract the length within parentheses
+        if (preg_match('/\((\d+)\)/', $type, $matches)) {
+            return (int)$matches[1];
+        }
+
+        // Return 0 if no length is found
+        return 0;
+    }
+
+    private static function getEnumValues($type, $fullType): array
+    {
+        if (!preg_match("/^$type\((.*)\)$/", $fullType, $matches)) die("Invalid $type value");
+        return str_getcsv($matches[1], ',', "'");
     }
 
     public function validationType()
@@ -111,53 +110,49 @@ class ColumnInfo
      */
     public static function fromTable($table): array
     {
-        if (!self::$inited) self::init();
-        assert(self::$schema->tablesExist($table), "Database table '$table' does not exist.");
+        assert(Schema::hasTable($table), "Database table '$table' does not exist.");
 
         $columns = [];
         $uniques = [];
         $foreign = [];
-        $tableInfo = self::$schema->listTableDetails($table);
 
-        foreach ($tableInfo->getIndexes() as $index) {
-            if ($index->isUnique() && count($index->getColumns()) == 1) {
-                $uniques[] = $index->getColumns()[0];
+        foreach (Schema::getIndexes($table) as $index) {
+            if ($index['unique'] && count($index['columns']) == 1) {
+                $uniques[] = $index['columns'][0];
             }
         }
-        foreach ($tableInfo->getForeignKeys() as $foreignKey) {
-            if (count($foreignKey->getColumns()) == 1) {
-                $localColumn = $foreignKey->getLocalColumns()[0];
-                $foreignTable = $foreignKey->getForeignTableName();
-                $foreignColumn = $foreignKey->getForeignColumns()[0];
+
+        foreach (Schema::getForeignKeys($table) as $foreignKey) {
+            if (count($foreignKey['columns']) == 1) {
+                $localColumn = $foreignKey['columns'][0];
+                $foreignTable = $foreignKey['foreign_table'];
+                $foreignColumn = $foreignKey['foreign_columns'][0];
                 $foreign[$localColumn] = "$foreignTable,$foreignColumn";
             }
         }
-        foreach ($tableInfo->getColumns() as $column) {
-            $columnName = $column->getName();
+
+        foreach (Schema::getColumns($table) as $column) {
+            $columnName = $column['name'];
             $columnInfo = new ColumnInfo($column, $uniques, $foreign);
-            $columnType = $columnInfo->type;
             $columns[$columnName] = $columnInfo;
-            if ($columnType == 'enum' || $columnType == 'set') {
-                $columnInfo->values = self::getEnumValues($table, $columnName, $columnType);
-            }
         }
+        
         return $columns;
     }
 
     public static function getReferencingKeys($refTable)
     {
-        if (!self::$inited) self::init();
         $keys = [];
-        foreach (self::$schema->listTables() as $table) {
+        foreach (Schema::getTables() as $table) {
             $columns = null;
-            foreach ($table->getForeignKeys() as $foreignKey) {
-                if (!$columns) $columns = self::fromTable($table->getName());
-                if ($foreignKey->getForeignTableName() == $refTable) {
-                    if (count($foreignKey->getColumns()) == 1) {
+            foreach (Schema::getForeignKeys($table['name']) as $foreignKey) {
+                if (!$columns) $columns = self::fromTable($table['name']);
+                if ($foreignKey['foreign_table'] == $refTable) {
+                    if (count($foreignKey['columns']) == 1) {
                         $key = [
-                            'table' => $foreignKey->getLocalTableName(),
-                            'key' => $foreignKey->getLocalColumns()[0],
-                            'ref' => $foreignKey->getForeignColumns()[0],
+                            'table' => $table['name'],
+                            'key' => $foreignKey['columns'][0],
+                            'ref' => $foreignKey['foreign_columns'][0],
                         ];
                         $key['unique'] = $columns[$key['key']]->unique;
                         $keys[] = $key;
@@ -167,41 +162,4 @@ class ColumnInfo
         }
         return $keys;
     }
-
-    private static function getEnumValues($table, $field, $type): array
-    {
-        $data = DB::select(DB::raw("show columns from {$table} where field = '{$field}'"));
-        if (!is_array($data)) die("$type field data is not an array");
-        if (!isset($data[0])) die("$type field data is empty array");
-        if (!isset($data[0]->Type)) die("$type field data is invalid");
-        if (!preg_match('/^enum\((.*)\)$/', $data[0]->Type, $matches)) die("Invalid $type value");
-        return str_getcsv($matches[1], ',', "'");
-    }
 }
-
-class EnumType extends Type
-{
-    public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
-    {
-        return 'enum';
-    }
-
-    public function getName(): string
-    {
-        return 'enum';
-    }
-}
-
-class SetType extends Type
-{
-    public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
-    {
-        return 'set';
-    }
-
-    public function getName(): string
-    {
-        return 'set';
-    }
-}
-

@@ -4,10 +4,9 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^7.2 || ^8.0",
-        "laravel/framework": ">=6.0",
-        "doctrine/dbal": "^3.1",
-        "jeroennoten/laravel-adminlte": "^3.6"
+        "php": "^8.2",
+        "laravel/framework": ">=11.0",
+        "jeroennoten/laravel-adminlte": "^3.14"
     },
     "autoload": {
         "psr-4": {
