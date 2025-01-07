@@ -2,6 +2,10 @@
 
 namespace Adwiv\Laravel\CrudGenerator;
 
+use Adwiv\Laravel\CrudGenerator\Commands\ControllerMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Commands\ModelMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Commands\RequestMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Commands\ResourceMakeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class CrudGeneratorServiceProvider extends ServiceProvider
@@ -11,9 +15,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
-    {
-    }
+    public function register() {}
 
     /**
      * Bootstrap services.
@@ -25,9 +27,9 @@ class CrudGeneratorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ControllerMakeCommand::class,
-                ModelMakeCommand::class,
                 RequestMakeCommand::class,
                 ResourceMakeCommand::class,
+                ModelMakeCommand::class,
                 CrudGenerator::class,
                 ViewIndexMakeCommand::class,
                 ViewEditMakeCommand::class,

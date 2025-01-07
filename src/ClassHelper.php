@@ -10,27 +10,6 @@ use Illuminate\Support\Str;
  */
 trait ClassHelper
 {
-    protected function baseNamespace(): string
-    {
-        return trim($this->laravel->getNamespace(), '\\');
-    }
-
-    protected function defaultNamespace($rootNamespace, $type = null): string
-    {
-        $type = $type ?? $this->type;
-        if ($type == 'Request') return $rootNamespace . '\Http\Requests';
-        if ($type == 'Resource') return $rootNamespace . '\Http\Resources';
-        if ($type == 'Collection') return $rootNamespace . '\Http\Resources';
-        if ($type == 'Controller') return $rootNamespace . '\Http\Controllers';
-        if ($type == 'Model') return is_dir(app_path('Models')) ? $rootNamespace . '\Models' : $rootNamespace;
-        throw new \InvalidArgumentException("Unknown class type '$this->type'.");
-    }
-
-    protected function getDefaultNamespace($rootNamespace)
-    {
-        return $this->defaultNamespace($rootNamespace);
-    }
-
     /**
      * Parse the class name and format according to the root namespace.
      */
@@ -96,7 +75,7 @@ trait ClassHelper
         $dir = $this->laravel->resourcePath('views');
         $path = str_replace('.', '/', "$viewPrefix.$name");
         $path = str_replace('//', '/', "/$path");
-        return "$dir$path-$type.blade.php";
+        return "$dir$path/$type.blade.php";
     }
 
     protected function prefixWithDot($prefix): string
@@ -121,6 +100,17 @@ trait ClassHelper
         }
     }
 
+    protected function guessModelNameOrNull($name): ?string
+    {
+        $suffix = $this->type;
+        $baseLen = strlen($suffix);
+        $baseName = class_basename($name);
+        if (strlen($baseName) > $baseLen && str_ends_with($baseName, $suffix)) {
+            return substr($baseName, 0, -$baseLen);
+        }
+        return null;
+    }
+
     protected function guessModelName($name)
     {
         if (!($model = $this->option('model'))) {
@@ -135,27 +125,5 @@ trait ClassHelper
             }
         }
         return $model;
-    }
-
-    protected function getVisibleFields($modelClass, array $ignore = []): array
-    {
-        /** @var Model $modelObject */
-        $modelObject = new $modelClass();
-        $visible = [];
-        $fields = $modelObject->getVisible();
-        $hidden = $modelObject->getHidden();
-
-        $table = $modelObject->getTable();
-        $columns = ColumnInfo::fromTable($table);
-        if (empty($fields)) {
-            $fields = array_keys($columns);
-        }
-
-        foreach ($fields as $field) {
-            if (!in_array($field, $hidden) && !in_array($field, $ignore)) {
-                $visible[$field] = $columns[$field];
-            }
-        }
-        return $visible;
     }
 }

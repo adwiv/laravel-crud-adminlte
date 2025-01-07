@@ -7,12 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
-class ViewIndexMakeCommand extends ViewBaseMakeCommand
+class ViewIndexMakeCommand extends ViewGeneratorCommand
 {
+    protected $view = 'index';
     protected $name = 'crud:view-index';
     protected $description = 'Create a new index view';
-    protected $type = 'IndexView';
-    protected $viewType = 'index';
 
     /**
      * Get the stub file for the generator.

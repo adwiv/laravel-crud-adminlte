@@ -7,11 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
-abstract class ViewBaseMakeCommand extends GeneratorCommand
+abstract class ViewGeneratorCommand extends GeneratorCommand
 {
     use ClassHelper;
 
-    protected $viewType = 'undefined';
+    protected $view = 'view';
+    protected $type = 'View';
+    protected readonly string $viewType;
+
+    protected abstract function buildViewReplacements($modelClass, $fields): array;
 
     /**
      * Parse the class name and format according to the root namespace.
@@ -27,7 +31,8 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
     protected final function getPath($name): string
     {
         $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        return $this->fullViewPath($name, $viewPrefix, $this->viewType);
+        $model = $this->option('model') ?? $name;
+        return $this->fullViewPath($name, $viewPrefix, $this->view);
     }
 
     protected final function buildClass($name)
@@ -55,7 +60,9 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
         );
 
         return str_replace(
-            array_keys($replace), array_values($replace), parent::buildClass($name)
+            array_keys($replace),
+            array_values($replace),
+            parent::buildClass($name)
         );
     }
 
@@ -64,16 +71,14 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
      */
     protected function copyBladeScripts()
     {
-        $dir = $this->laravel->resourcePath('views/layouts/');
+        $dir = $this->laravel->resourcePath('views/components/layouts/');
         if (!file_exists($dir)) mkdir($dir);
-        $files = ["adminlte.blade.php"];
+        $files = ["crud.blade.php"];
         foreach ($files as $file) {
             if (!file_exists("$dir$file"))
-                copy($this->resolveStubPath("/stubs/views/layouts/$file"), "$dir$file");
+                copy($this->resolveStubPath("/stubs/views/components/layouts/$file"), "$dir$file");
         }
     }
-
-    protected abstract function buildViewReplacements($modelClass, $fields): array;
 
     /**
      * Get the console command options.
@@ -81,11 +86,11 @@ abstract class ViewBaseMakeCommand extends GeneratorCommand
     protected function getOptions(): array
     {
         return [
-            ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Specify Model to use.'],
-            ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for views and routes.'],
-            ['view-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
-            ['route-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
+            ['force', 'f', InputOption::VALUE_NONE, 'Create the view even if the view already exists'],
+            ['prefix', 'p', InputOption::VALUE_REQUIRED, 'Prefix for the generated views and routes.'],
+            ['view-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix parent directory for the generated views.'],
+            ['route-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used by the generated views.'],
         ];
     }
 }

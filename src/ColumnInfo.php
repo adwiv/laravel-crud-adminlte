@@ -10,20 +10,22 @@ use Illuminate\Support\Str;
 
 class ColumnInfo
 {
-    public $name;
-    public $type;
-    public $length;
-    public $unsigned;
-    public $notNull;
-    public $unique;
-    public $foreign;
-    public $values;
+    public string $name;
+    public string $type;
+    public int $length = 0;
+    public int $precision = 0;
+    public bool $unsigned;
+    public bool $notNull;
+    public bool $unique;
+    public ?string $foreign;
+    public array $values;
 
     public function __construct(array $column, array $uniques, array $foreign)
     {
+        // echo "Column: " . print_r($column, true) . "\n";
         $this->name = $column['name'];
         $this->type = $column['type_name'];
-        $this->length = $this->extractFieldLength($column['type']);
+        $this->extractFieldLength($column['type']);
         $this->unsigned = str_contains($column['type'], 'unsigned');
         $this->notNull = $column['nullable'] === false;
         $this->unique = in_array($this->name, $uniques);
@@ -34,15 +36,27 @@ class ColumnInfo
         }
     }
 
-    private static function extractFieldLength($type): int
+    public function isUuid(): bool
+    {
+        return $this->type == 'char' && $this->length == 36;
+    }
+
+    public function isUlid(): bool
+    {
+        return $this->type == 'char' && $this->length == 26;
+    }
+
+    private function extractFieldLength($type): void
     {
         // Use preg_match to extract the length within parentheses
         if (preg_match('/\((\d+)\)/', $type, $matches)) {
-            return (int)$matches[1];
+            $this->length = (int)$matches[1];
         }
 
-        // Return 0 if no length is found
-        return 0;
+        if (preg_match('/\((\d+),(\d+)\)/', $type, $matches)) {
+            $this->length = (int)$matches[1];
+            $this->precision = (int)$matches[2];
+        }
     }
 
     private static function getEnumValues($type, $fullType): array
@@ -57,10 +71,12 @@ class ColumnInfo
             case 'smallint':
             case 'integer':
             case 'bigint':
+            case 'smallint':
                 return 'integer';
             case 'decimal':
             case 'float':
                 return 'numeric';
+            case 'varchar':
             case 'string':
             case 'ascii_string':
             case 'enum':
@@ -71,11 +87,14 @@ class ColumnInfo
                 return 'boolean';
             case 'date':
             case 'date_immutable':
+                return 'date_format:Y-m-d';
+            case 'timestamp':
             case 'datetime':
             case 'datetime_immutable':
+                return 'date_format:Y-m-d\\TH:i:s';
             case 'time':
             case 'time_immutable':
-                return 'date';
+                return 'date_format:H:i:s';
             case 'array':
             case 'simple_array':
             case 'json':
@@ -87,6 +106,10 @@ class ColumnInfo
     public function castType()
     {
         switch ($this->type) {
+            case 'tinyint':
+                return $this->length === 1 ? 'boolean' : 'integer';
+            case 'decimal':
+                return "decimal:{$this->precision}";
             case 'boolean':
                 return 'boolean';
             case 'date':
@@ -112,16 +135,32 @@ class ColumnInfo
     {
         assert(Schema::hasTable($table), "Database table '$table' does not exist.");
 
-        $columns = [];
-        $uniques = [];
-        $foreign = [];
+        $uniques = self::getUniqueColumns($table);
+        $foreign = self::getForeignColumns($table);
 
+        $columns = [];
+        foreach (Schema::getColumns($table) as $column) {
+            $columnName = $column['name'];
+            $columnInfo = new ColumnInfo($column, $uniques, $foreign);
+            $columns[$columnName] = $columnInfo;
+        }
+        return $columns;
+    }
+
+    public static function getUniqueColumns($table): array
+    {
+        $uniques = [];
         foreach (Schema::getIndexes($table) as $index) {
             if ($index['unique'] && count($index['columns']) == 1) {
                 $uniques[] = $index['columns'][0];
             }
         }
+        return $uniques;
+    }
 
+    public static function getForeignColumns($table): array
+    {
+        $foreign = [];
         foreach (Schema::getForeignKeys($table) as $foreignKey) {
             if (count($foreignKey['columns']) == 1) {
                 $localColumn = $foreignKey['columns'][0];
@@ -130,14 +169,7 @@ class ColumnInfo
                 $foreign[$localColumn] = "$foreignTable,$foreignColumn";
             }
         }
-
-        foreach (Schema::getColumns($table) as $column) {
-            $columnName = $column['name'];
-            $columnInfo = new ColumnInfo($column, $uniques, $foreign);
-            $columns[$columnName] = $columnInfo;
-        }
-        
-        return $columns;
+        return $foreign;
     }
 
     public static function getReferencingKeys($refTable)

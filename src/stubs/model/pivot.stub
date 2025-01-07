@@ -2,9 +2,17 @@
 
 namespace {{ namespace }};
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class {{ class }} extends Pivot
 {
-    //
+    use HasFactory{{ TRAITS }};
+    {{ TABLE }}
+    protected $guarded = ['id'];
+
+    {{ CASTS }}
+    {{ UNIQUES }}
+    {{ BELONGS }}
+    {{ HASMANY }}
 }

@@ -1,26 +1,18 @@
-@extends('layouts.adminlte')
+<x-layouts.crud>
 
-@section('title', '{{ model }} List')
+<x-slot name="title">{{ model }} List</x-slot>
 
-@section('content_header')
-    <div class="row align-items-center">
-        <div class="col">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}home')}}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.index')}}">{{ pluralModel }}</a></li>
-            </ol>
-        </div>
-        <div class="col text-right">
-        </div>
-    </div>
-@stop
+<x-slot name="breadcrumbs">
+    <li class="breadcrumb-item"><a href="{{route('{{ HOMEPREFIX }}home')}}">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModel }}</a></li>
+</x-slot>
 
-@section('content')
+<x-slot name="content">
     <div class="card">
         <div class="card-header">
             <div class="card-title text-lg">{{ model }} List</div>
             <div class="card-tools mr-0">
-                <a class="btn btn-sm btn-outline-success" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.create')}}">Create {{ model }}</a>
+                <a class="btn btn-sm btn-outline-success" href="{{route('{{ routeprefix }}.create')}}">Create {{ model }}</a>
             </div>
         </div>
         <div class="card-body p-0">
@@ -37,10 +29,10 @@
                         {{ BODY }}
                         <td>
                             <div class="d-flex justify-content-between">
-                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }}) }}"
-                                   class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
-                                <a href="{{ route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }}) }}"
-                                   class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
+                                <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}"
+                                    class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
+                                <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}"
+                                    class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
                             </div>
                         </td>
                     </tr>
@@ -57,4 +49,6 @@
     <div class="row justify-content-center">
         {{ ${{ pluralModelVariable }}->links('pagination::bootstrap-4') }}
     </div>
-@stop
+</x-slot>
+
+</x-layouts.crud>

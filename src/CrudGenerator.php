@@ -35,7 +35,7 @@ class CrudGenerator extends Command
     {
         $model = trim($this->argument('model'));
         $modelClass = $this->fullModelClass($model);
-        $modelBaseName = class_basename($modelClass);
+        $modelName = class_basename($modelClass);
 
         if (!($table = $this->option('table'))) {
             if ($this->classExists($modelClass)) {
@@ -53,14 +53,14 @@ class CrudGenerator extends Command
         }
 
         // Generate Request
-        $requestClass = $this->fullRequestClass("{$modelBaseName}Request");
+        $requestClass = $this->fullRequestClass("{$modelName}Request");
         $classPath = $this->fullClassPath($requestClass);
         if (!file_exists($classPath) || $this->confirm("$requestClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:request', ['name' => $requestClass, '--model' => $modelClass, '--force' => true]);
         }
 
         // Generate Resource
-        $resourceClass = $this->fullResourceClass("{$modelBaseName}Resource");
+        $resourceClass = $this->fullResourceClass("{$modelName}Resource");
         $classPath = $this->fullClassPath($resourceClass);
         if (!file_exists($classPath) || $this->confirm("$resourceClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
@@ -70,30 +70,30 @@ class CrudGenerator extends Command
         $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
 
         // Generate Controller
-        $controllerClass = $this->fullControllerClass("{$modelBaseName}Controller");
+        $controllerClass = $this->fullControllerClass("{$modelName}Controller");
         $classPath = $this->fullClassPath($controllerClass);
         if (!file_exists($classPath) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
         }
 
         // Generate Index View
-        $viewName = strtolower($modelBaseName);
+        $viewName = strtolower(Str::plural($modelName));
         $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'index');
-        if (!file_exists($viewPath) || $this->confirm("$viewName index view already exists. Do you want to overwrite it?", false)) {
+        if (!file_exists($viewPath) || $this->confirm("$viewName.index view already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:view-index', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
         }
 
         // Generate Edit View
-        $viewName = strtolower($modelBaseName);
+        $viewName = strtolower(Str::plural($modelName));
         $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'edit');
-        if (!file_exists($viewPath) || $this->confirm("$viewName edit view already exists. Do you want to overwrite it?", false)) {
+        if (!file_exists($viewPath) || $this->confirm("$viewName.edit view already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:view-edit', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
         }
 
         // Generate Show View
-        $viewName = strtolower($modelBaseName);
+        $viewName = strtolower(Str::plural($modelName));
         $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'show');
-        if (!file_exists($viewPath) || $this->confirm("$viewName show view already exists. Do you want to overwrite it?", false)) {
+        if (!file_exists($viewPath) || $this->confirm("$viewName.show view already exists. Do you want to overwrite it?", false)) {
             $this->call('crud:view-show', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
         }
     }

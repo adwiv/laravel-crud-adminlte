@@ -4,35 +4,34 @@
 namespace {{ namespace }};
 
 use {{ namespacedModel }};
-use {{ namespacedParentModel }};
 use {{ rootNamespace }}Http\Controllers\Controller;
 use {{ rootNamespace }}Http\Requests\{{ model }}Request;
 use Exception;
 
 class {{ class }} extends Controller
 {
-    public function index({{ parentModel }} ${{ parentModelVariable }})
+    public function index()
     {
-        ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
+        ${{ pluralModelVariable }} = {{ model }}::paginate();
         return view('{{ viewprefix }}.index', compact('{{ pluralModelVariable }}'));
     }
 
-    public function create({{ parentModel }} ${{ parentModelVariable }})
+    public function create()
     {
         ${{ modelVariable }} = null;
         $referrer = url()->previous();
-        $action = route('{{ routeprefix }}.store', ${{ parentModelVariable }});
-        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
+        $action = route('{{ routeprefix }}.store');
+        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
-    public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
+    public function store({{ model }}Request $request)
     {
         $referrer = $request->get('_referrer');
-        $redirectTo = $referrer ?: route('{{ routeprefix }}.index', ${{ parentModelVariable }});
+        $redirectTo = $referrer ?: route('{{ routeprefix }}.index');
 
         try {
             $fields = $request->validated();
-            ${{ parentModelVariable }}->{{ pluralModelVariable }}()->create($fields);
+            {{ model }}::create($fields);
         } catch (Exception $e) {
             return redirect($redirectTo)->with('warning', '{{ model }} creation failed. ' . $e->getMessage());
         }

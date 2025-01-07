@@ -4,12 +4,11 @@ namespace Adwiv\Laravel\CrudGenerator;
 
 use Illuminate\Support\Str;
 
-class ViewEditMakeCommand extends ViewBaseMakeCommand
+class ViewEditMakeCommand extends ViewGeneratorCommand
 {
+    protected $view = 'edit';
     protected $name = 'crud:view-edit';
     protected $description = 'Create a new create/edit view';
-    protected $type = 'EditView';
-    protected $viewType = 'edit';
 
     /**
      * Get the stub file for the generator.
@@ -37,7 +36,7 @@ class ViewEditMakeCommand extends ViewBaseMakeCommand
             $valType = $columnInfo->validationType();
             $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
             $required = $columnInfo->notNull ? 'required' : '';
-            // echo "$field:: {$columnInfo->type} {$columnInfo->castType()} {$columnInfo->type} {$columnInfo->length}\n";
+
             if ($castType == 'boolean') {
                 $emptyOptionClass = $required ? 'class="d-none"' : '';
                 $FIELDS .=

@@ -1,27 +1,19 @@
-@extends('layouts.adminlte')
+<x-layouts.crud>
 
-@section('title', '{{ model }} Details')
+<x-slot name="title">{{ model }} Details</x-slot>
 
-@section('content_header')
-    <div class="row align-items-center">
-        <div class="col">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}home')}}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.index')}}">{{ pluralModel }}</a></li>
-                <li class="breadcrumb-item active"><a href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
-            </ol>
-        </div>
-        <div class="col text-right">
-        </div>
-    </div>
-@stop
+<x-slot name="breadcrumbs">
+    <li class="breadcrumb-item"><a href="{{route('{{ HOMEPREFIX }}home')}}">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModel }}</a></li>
+    <li class="breadcrumb-item active"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+</x-slot>
 
 @section('content')
     <div class="card">
         <div class="card-header">
             <div class="card-title text-lg">{{ model }} Details</div>
             <div class="card-tools mr-0">
-                <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routePrefix }}{{ pluralModelVariable }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
+                <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routeprefix }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
             </div>
         </div>
 
@@ -32,3 +24,5 @@
         </div>
     </div>
 @stop
+
+</x-layouts.crud>

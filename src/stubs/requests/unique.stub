@@ -13,7 +13,7 @@ class {{ class }} extends FormRequest
 
     public function rules(): array
     {
-        ${{ modelVariable }}Id = $this->route('{{ modelVariable }}');
+        ${{ modelVariable }}Id = $this->route()->parameter('{{ modelVariable }}');
         $ignoreId = ${{ modelVariable }}Id ? ",${{ modelVariable }}Id,id" : '';
 
         return [

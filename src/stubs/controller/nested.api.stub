@@ -11,16 +11,14 @@ use {{ rootNamespace }}Http\Resources\{{ model }}Resource;
 
 class {{ class }} extends Controller
 {
-    public function index(${{ parentModelVariable }}Id)
+    public function index({{ parentModel }} ${{ parentModelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         return {{ model }}Resource::collection(${{ pluralModelVariable }});
     }
 
-    public function store({{ model }}Request $request, ${{ parentModelVariable }}Id)
+    public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         $fields = $request->validated();
         $fields['{{ parentModelVariable }}_id'] = ${{ parentModelVariable }}->id;
 
@@ -28,31 +26,29 @@ class {{ class }} extends Controller
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function show(${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    public function show({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
-        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
-
+        $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function update({{ model }}Request $request, ${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    public function update({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
-        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+        $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
 
         $fields = $request->validated();
         ${{ modelVariable }}->update($fields);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function destroy(${{ parentModelVariable }}Id, ${{ modelVariable }}Id)
+    public function destroy({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
-        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+        $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
         ${{ modelVariable }}->delete();
+    }
+
+    private function validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }})
+    {
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
     }
 }

@@ -1,5 +1,8 @@
 {
     "name": "adwiv/laravel-crud-adminlte",
+    "replace": {
+        "adwiv/laravel-crud-generator": "*"
+    },
     "description": "Generate CRUD Model, Controller, Resource, Request and Views for Laravel",
     "type": "library",
     "license": "MIT",

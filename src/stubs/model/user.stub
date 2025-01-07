@@ -1,0 +1,23 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+{{ IMPORTS }}
+
+/**
+ * @mixin \Eloquent
+ */
+class {{ class }} extends Authenticatable
+{
+    use HasFactory, Notifiable{{ TRAITS }};
+    {{ TABLE }}
+    protected $guarded = ['id', 'password', 'remember_token'];
+
+    {{ CASTS }}
+    {{ UNIQUES }}
+    {{ BELONGS }}
+    {{ HASMANY }}
+}

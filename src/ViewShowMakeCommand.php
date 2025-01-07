@@ -7,12 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
 
-class ViewShowMakeCommand extends ViewBaseMakeCommand
+class ViewShowMakeCommand extends ViewGeneratorCommand
 {
+    protected $view = 'show';
     protected $name = 'crud:view-show';
     protected $description = 'Create a detail view';
-    protected $type = 'ShowView';
-    protected $viewType = 'show';
 
     /**
      * Get the stub file for the generator.
