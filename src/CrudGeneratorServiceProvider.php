@@ -6,6 +6,7 @@ use Adwiv\Laravel\CrudGenerator\Commands\ControllerMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\ModelMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\RequestMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\ResourceMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Commands\ViewMakeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class CrudGeneratorServiceProvider extends ServiceProvider
@@ -31,9 +32,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
                 ResourceMakeCommand::class,
                 ModelMakeCommand::class,
                 CrudGenerator::class,
-                ViewIndexMakeCommand::class,
-                ViewEditMakeCommand::class,
-                ViewShowMakeCommand::class,
+                ViewMakeCommand::class,
             ]);
         }
     }

@@ -2,7 +2,6 @@
 
 namespace Adwiv\Laravel\CrudGenerator\Commands;
 
-use Adwiv\Laravel\CrudGenerator\ClassHelper;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
@@ -53,7 +52,7 @@ class ControllerMakeCommand extends GeneratorCommand
         $parentRoutePrefix = array_pop($routePrefixParts);
 
         // Get the view prefix
-        $viewPrefix = $this->getCrudViewPrefix($routePrefix);
+        $viewPrefix = $this->getCrudViewPrefix($modelBaseName, $parentBaseName, $routePrefix);
 
         $replace = [];
 
@@ -118,7 +117,7 @@ class ControllerMakeCommand extends GeneratorCommand
             ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
-            ['parent', null, InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
+            ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
             ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the views used.'],

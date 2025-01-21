@@ -98,9 +98,51 @@ class ColumnInfo
             case 'array':
             case 'simple_array':
             case 'json':
+            case 'set':
                 return 'array';
         }
         return $this->type;
+    }
+
+    public function formInputType()
+    {
+        switch ($this->type) {
+            case 'smallint':
+            case 'integer':
+            case 'bigint':
+            case 'smallint':
+                return 'integer';
+            case 'decimal':
+            case 'float':
+            case 'double':
+                return 'numeric';
+            case 'date':
+            case 'date_immutable':
+                return 'date';
+            case 'time':
+            case 'time_immutable':
+                return 'time';
+            case 'timestamp':
+            case 'datetime':
+            case 'datetime_immutable':
+                return 'datetime';
+            case 'enum':
+            case 'boolean':
+                return 'single-select';
+            case 'set':
+            case 'array':
+            case 'simple_array':
+                return 'multi-select';
+            case 'json':
+                return 'json';
+            case 'varchar':
+            case 'string':
+            case 'text':
+            case 'guid':
+            case 'ascii_string':
+                return 'text';
+        }
+        throw new \Exception("Unknown form input type for column $this->name");
     }
 
     public function castType()

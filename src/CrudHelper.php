@@ -19,11 +19,12 @@ trait CrudHelper
     protected function defaultNamespace($rootNamespace, $type = null): string
     {
         $type = $type ?? $this->type;
+        if ($type == 'View') return $rootNamespace . '\Views';
         if ($type == 'Model') return $rootNamespace . '\Models';
         if ($type == 'Request') return $rootNamespace . '\Http\Requests';
         if ($type == 'Resource') return $rootNamespace . '\Http\Resources';
         if ($type == 'Controller') return $rootNamespace . '\Http\Controllers';
-        throw new \InvalidArgumentException("Unknown class type '$this->type'.");
+        $this->fail("Unknown class type '$this->type'.");
     }
 
     protected function getDefaultNamespace($rootNamespace)
@@ -34,7 +35,7 @@ trait CrudHelper
     /**
      * Resolve the fully-qualified path to the stub.
      */
-    protected function resolveStubPath(string $stub): string
+    protected function resolveStubPath(string $stub)
     {
         return file_exists($customPath = $this->laravel->basePath(trim($stub, '/')))
             ? $customPath
@@ -52,8 +53,7 @@ trait CrudHelper
         $model = $this->qualifyModel($model);
         if (class_exists($model)) return $model;
 
-        $this->error("Model class {$model} does not exist.");
-        die();
+        $this->fail("Model class {$model} does not exist.");
     }
 
     private function guessCrudModel(string $name): ?string
@@ -97,20 +97,19 @@ trait CrudHelper
         );
     }
 
-    protected function getCrudParentModel(string $model): ?string
+    protected function getCrudParentModel(string $model, ?string $suggestedParent = null): ?string
     {
         $parent = $this->option('parent');
         if (!$parent) {
             $options = $this->guessCrudParentModels($model);
             if (empty($options)) return null; // No parent models
-            $parent = $this->confirmCrudParentModel($options);
+            $parent = $this->confirmCrudParentModel($options, $suggestedParent);
         }
 
         $parent = $this->qualifyModel($parent);
         if (class_exists($parent)) return $parent;
 
-        $this->error("Model class {$parent} does not exist.");
-        die();
+        $this->fail("Model class {$parent} does not exist.");
     }
 
     private function guessCrudParentModels(string $model): array
@@ -124,12 +123,12 @@ trait CrudHelper
         return $parents;
     }
 
-    private function confirmCrudParentModel(array $options): string
+    private function confirmCrudParentModel(array $options, ?string $suggestedParent = null): string
     {
         return suggest(
             label: 'Parent model class name:',
             options: $options,
-            default: $options[0] ?? '',
+            default: $suggestedParent ?? $options[0] ?? '',
             required: 'Parent model class name is required.',
             hint: $this->type . ' will be generated using this parent model.',
             transform: fn(string $value) => $this->qualifyModel($value),
@@ -139,13 +138,15 @@ trait CrudHelper
         );
     }
 
-    private function getCrudRoutePrefix(string $model, ?string $parent): string
+    protected function getCrudRoutePrefix(string $model, ?string $parent = null, ?string $prefix = null): string
     {
         $routePrefix = $this->option('routeprefix') ?? $this->option('prefix');
         if (!$routePrefix) {
-            $routePrefix = $this->modelToPrefix($model);
-            if ($parent) $routePrefix = $this->modelToPrefix($parent) . '.' . $routePrefix;
-            $routePrefix = $this->confirmCrudRoutePrefix($routePrefix, $parent !== null);
+            if (!$prefix) {
+                $prefix = $this->modelToPrefix($model);
+                if ($parent) $prefix = $this->modelToPrefix($parent) . '.' . $prefix;
+            }
+            $routePrefix = $this->confirmCrudRoutePrefix($prefix, $parent !== null);
         }
         return $routePrefix;
     }
@@ -167,11 +168,15 @@ trait CrudHelper
         );
     }
 
-    private function getCrudViewPrefix(string $routePrefix): string
+    private function getCrudViewPrefix(string $model, ?string $parent = null, ?string $prefix = null): string
     {
         $viewPrefix = $this->option('viewprefix') ?? $this->option('prefix');
         if (!$viewPrefix) {
-            $viewPrefix = $this->confirmCrudViewPrefix($routePrefix);
+            if (!$prefix) {
+                $prefix = $this->modelToPrefix($model);
+                if ($parent) $prefix = $this->modelToPrefix($parent) . '.' . $prefix;
+            }
+            $viewPrefix = $this->confirmCrudViewPrefix($prefix);
         }
         return $viewPrefix;
     }
@@ -261,5 +266,19 @@ trait CrudHelper
             }
         }
         return $visible;
+    }
+
+    protected function copyDir(string $sourceDir, string $destinationDir, bool $overwrite = false)
+    {
+        if (!file_exists($destinationDir)) {
+            mkdir($destinationDir, 0755, true);
+        }
+
+        $files = scandir($sourceDir);
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..') continue;
+            if (!$overwrite && file_exists($destinationDir . $file)) continue;
+            copy($sourceDir . $file, $destinationDir . $file);
+        }
     }
 }

@@ -69,15 +69,6 @@ trait ClassHelper
         return str_replace('//', '/', $path);
     }
 
-    protected function fullViewPath($name, $viewPrefix, $type): string
-    {
-        $name = strtolower($name);
-        $dir = $this->laravel->resourcePath('views');
-        $path = str_replace('.', '/', "$viewPrefix.$name");
-        $path = str_replace('//', '/', "/$path");
-        return "$dir$path/$type.blade.php";
-    }
-
     protected function prefixWithDot($prefix): string
     {
         return ($prefix = trim($prefix)) ? str_replace('..', '.', "$prefix.") : '';

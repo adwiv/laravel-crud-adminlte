@@ -166,7 +166,7 @@ class ModelMakeCommand extends GeneratorCommand
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists'],
             ['table', 't', InputOption::VALUE_REQUIRED, 'Table to use to generate the model'],
-            ['pivot', 'p', InputOption::VALUE_NONE, 'Indicates if the generated model should be a custom intermediate table model'],
+            ['pivot', null, InputOption::VALUE_NONE, 'Indicates if the generated model should be a custom intermediate table model'],
         ];
     }
 }

@@ -66,8 +66,8 @@ class CrudGenerator extends Command
             $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
         }
 
-        $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
+        $viewPrefix = $this->option('viewprefix') ?? $this->option('prefix') ?? '';
+        $routePrefix = $this->option('routeprefix') ?? $this->option('prefix') ?? '';
 
         // Generate Controller
         $controllerClass = $this->fullControllerClass("{$modelName}Controller");
@@ -114,10 +114,10 @@ class CrudGenerator extends Command
     protected function getOptions(): array
     {
         return [
-            ['table', null, InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],
+            ['table', 't', InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for views and routes.'],
-            ['view-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
-            ['route-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
+            ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
+            ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
         ];
     }
 }
