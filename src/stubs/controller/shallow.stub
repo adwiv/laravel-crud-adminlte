@@ -20,23 +20,19 @@ class {{ class }} extends Controller
     public function create({{ parentModel }} ${{ parentModelVariable }})
     {
         ${{ modelVariable }} = null;
-        $referrer = url()->previous();
         $action = route('{{ routeprefix }}.store', ${{ parentModelVariable }});
+        $referrer = request()->headers->get('referer');
+
         return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
+        $fields = $request->validated();
+        ${{ parentModelVariable }}->{{ pluralModelVariable }}()->create($fields);
+
         $referrer = $request->get('_referrer');
         $redirectTo = $referrer ?: route('{{ routeprefix }}.index', ${{ parentModelVariable }});
-
-        try {
-            $fields = $request->validated();
-            ${{ parentModelVariable }}->{{ pluralModelVariable }}()->create($fields);
-        } catch (Exception $e) {
-            return redirect($redirectTo)->with('warning', '{{ model }} creation failed. ' . $e->getMessage());
-        }
-
         return redirect($redirectTo)->with('success', '{{ model }} created successfully');
     }
 
@@ -47,34 +43,25 @@ class {{ class }} extends Controller
 
     public function edit({{ model }} ${{ modelVariable }})
     {
-        $referrer = url()->previous();
         $action = route('{{ routeprefix }}.update', ${{ modelVariable }});
+        $referrer = request()->headers->get('referer');
         return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
     public function update({{ model }}Request $request, {{ model }} ${{ modelVariable }})
     {
+        $fields = $request->validated();
+        ${{ modelVariable }}->update($fields);
+
         $referrer = $request->get('_referrer');
         $redirectTo = $referrer ?: route('{{ routeprefix }}.index');
-
-        try {
-            $fields = $request->validated();
-            ${{ modelVariable }}->update($fields);
-        } catch (Exception $e) {
-            return redirect($redirectTo)->with('warning', '{{ model }} update failed. ' . $e->getMessage());
-        }
-
         return redirect($redirectTo)->with('success', '{{ model }} updated successfully');
     }
 
     public function destroy({{ model }} ${{ modelVariable }})
     {
-        try {
-            ${{ modelVariable }}->delete();
-        } catch (Exception $e) {
-            return redirect()->back()->with('warning', '{{ model }} deletion failed. ' . $e->getMessage());
-        }
+        ${{ modelVariable }}->delete();
 
-        return redirect()->back()->with('success', '{{ model }} deleted successfully');
+        return redirect()->route('{{ routeprefix }}.index')->with('success', '{{ model }} deleted successfully');
     }
 }

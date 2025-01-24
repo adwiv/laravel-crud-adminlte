@@ -13,12 +13,11 @@
     @endisset
 </x-slot>
 
-<x-slot name="content">
 <div class="card">
     <div class="card-header">
         <div class="card-title text-lg">{{ ${{ modelVariable }} ? 'Edit {{ model }}' : 'Create {{ model }}' }}</div>
         <div class="card-tools mr-0">
-            <button type="reset" form="update-form" class="btn btn-sm btn-outline-warning">Reset</button>
+            <button type="reset" form="crud-edit" class="btn btn-sm btn-outline-warning">Reset</button>
         </div>
     </div>
     <div class="card-body">
@@ -32,69 +31,31 @@
         </div>
         @endif
 
-        <form id="update-form" method="post" class="needs-validation" novalidate autocomplete="off" action="{{ $action }}">
+        <form id="crud-edit" method="post" class="needs-validation" novalidate autocomplete="off" action="{{ $action }}">
             @if (${{ modelVariable }}) @method('PUT') @endif
             @csrf
             <input type="hidden" name="_referrer" value="{{ $referrer }}">
-            <div class="row">
-                {{ FIELDS }}
-            </div>
+            {{ FIELDS }}
         </form>
     </div>
     <div class="card-footer">
         <div class="row">
             <div class="col-sm-4">
-                <a class="btn btn-link pl-0" href="{{ $referrer }}">&laquo; Back</a>
+                <a class="btn btn-link pl-0" href="{{ $referrer ?? route('{{ routeprefix }}.index') }}">&laquo; Back</a>
             </div>
             <div class="col-sm-4 text-center">
             </div>
             <div class="col-sm-4 text-right">
-                <button type="submit" form="update-form" class="btn btn-info">{{ ${{ modelVariable }} ? 'Update {{ model }}' : 'Create {{ model }}' }}</button>
+                <button type="submit" form="crud-edit" class="btn btn-info">{{ ${{ modelVariable }} ? 'Update {{ model }}' : 'Create {{ model }}' }}</button>
             </div>
         </div>
     </div>
 </div>
-</x-slot>
 
 @push('js')
+    <script src="{{ asset('js/crud-edit.js') }}"></script>
     <script>
-        function slugify(text) {
-            return text.toString().toLowerCase().trim()
-                .replace(/&/g, '-and-')         // Replace & with 'and'
-                .replace(/[\s\W-]+/g, '-')      // Replace spaces, non-word characters and dashes with a single dash (-)
-                .replace(/-$/, '');             // Remove last floating dash if exists
-        }
-
-        $(document).ready(function () {
-            $(".slug-source").bind("propertychange keyup input cut paste", function (event) {
-                let slugId = $(this).data('slug-sink');
-
-                let slug = $("#" + slugId);
-                if (slug) {
-                    let text = slugify($(this).val());
-                    slug.val(text);
-                }
-            });
-        });
-
-        // Example starter JavaScript for disabling form submissions if there are invalid fields
-        (function () {
-            'use strict';
-            window.addEventListener('load', function () {
-                // Fetch all the forms we want to apply custom Bootstrap validation styles to
-                let forms = document.getElementsByClassName('needs-validation');
-                // Loop over them and prevent submission
-                let validation = Array.prototype.filter.call(forms, function (form) {
-                    form.addEventListener('submit', function (event) {
-                        if (form.checkValidity() === false) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                        form.classList.add('was-validated');
-                    }, false);
-                });
-            }, false);
-        })();
+        trackFormModification("crud-edit");
     </script>
 @endpush
 

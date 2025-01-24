@@ -2,12 +2,13 @@
 
 namespace Adwiv\Laravel\CrudGenerator\Commands;
 
-use Adwiv\Laravel\CrudGenerator\ClassHelper;
 use Adwiv\Laravel\CrudGenerator\ColumnInfo;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
+use BackedEnum;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\Console\Input\InputOption;
 
 class RequestMakeCommand extends GeneratorCommand
@@ -32,34 +33,66 @@ class RequestMakeCommand extends GeneratorCommand
         $modelFullName = $this->getCrudModel($name);
         $modelBaseName = class_basename($modelFullName);
 
-        /** @var Model $modelObject */
-        $modelObject = new $modelFullName();
-        $table = $modelObject->getTable();
+        /** @var Model $modelInstance */
+        $modelInstance = new $modelFullName();
+        $modelCasts = $modelInstance->getCasts();
+
+        $table = $modelInstance->getTable();
         $columns = ColumnInfo::fromTable($table);
 
-        $fillable = [];
+        $parentIdColumn = null;
+        $parentFullName = $this->getCrudParentModel($modelFullName);
+        if ($parentFullName) {
+            $parentTable = (new $parentFullName)->getTable();
+            $foreignColumns = ColumnInfo::getForeignColumns($table);
+            $parentIdColumn = array_search("$parentTable,id", $foreignColumns, true);
+            if (!$parentIdColumn) $this->warn('Table does not have an parent id column. ');
+        }
+
         $RULES = "";
         $MESSAGES = "";
+        $IMPORTS = "";
         foreach (array_keys($columns) as $field) {
             $ignore = ['id', 'uid', 'uuid', 'password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
             if (in_array($field, $ignore)) continue;
 
-            if ($modelObject->isFillable($field)) {
-                $fillable[] = $field;
+            if ($modelInstance->isFillable($field)) {
+                if ($field == $parentIdColumn) continue;
+                $castType = $modelCasts[$field] ?? null;
+
+                $rules = [];
 
                 /** @var ColumnInfo $column */
                 $column = $columns[$field];
                 if ($column->unique) $this->unique = true;
-                $required = $column->notNull ? 'required' : 'nullable';
+                $rules[] = $column->notNull ? "'required'" : "'nullable'";
+                $rules[] = "'{$column->validationType()}'";
 
-                $type = $column->validationType();
-                $min = $column->unsigned ? '|min:0' : '';
-                $max = $column->length > 0 ? '|max:' . $column->length : '';
-                $exists = $column->foreign ? "|exists:$column->foreign" : '';
-                $unique = $column->unique ? "|unique:$table,$field{\$ignoreId}" : '';
+                if ($column->unsigned) $rules[] = "'min:0'";
+                if ($column->length > 0) $rules[] = "'max:{$column->length}'";
+                if ($column->foreign) $rules[] = "'exists:{$column->foreign}'";
+                if ($column->unique) $rules[] = "\"unique:{$table},{$field}{\$ignoreId}\"";
 
-                $values = $column->type == 'enum' ? '|in:' . implode(',', $column->values) . '' : '';
-                $RULES .= "            '$field' => \"$required|$type$min$max$unique$exists$values\",\n";
+                $setRule = null;
+                if ($column->type == 'enum' || $column->type == 'set') {
+                    $isEnum = $column->type == 'enum';
+                    if ($castType) {
+                        // Cast type is either enum class name or a castable type
+                        $enumClass = last(explode(':', $castType));
+                        $isBackedEnum = is_subclass_of($enumClass, BackedEnum::class);
+                        if (!$isBackedEnum) $this->fail("Enum class $enumClass is not a BackedEnum");
+                        $IMPORTS .= "use $enumClass;\n";
+                        $enumBaseClass = class_basename($enumClass);
+                        $enumRule = "Rule::enum($enumBaseClass::class)";
+                    } else {
+                        $enumRule = "'in:{implode(',', $column->values)}'";
+                    }
+                    if ($isEnum) $rules[] = $enumRule;
+                    else $setRule = $enumRule;
+                }
+                $rules = implode(", ", $rules);
+                $RULES .= "            '$field' => [$rules],\n";
+                if ($setRule) $RULES .= "            '$field.*' => ['required', 'string', $setRule],\n";
                 $MESSAGES .= "            //'$field' => '',\n";
             }
         }
@@ -72,6 +105,7 @@ class RequestMakeCommand extends GeneratorCommand
         $replace = [
             '{{ RULES }}' => trim($RULES),
             '{{ MESSAGES }}' => trim($MESSAGES),
+            '{{ IMPORTS }}' => trim($IMPORTS),
         ];
 
         $replace = $this->buildModelReplacements($replace, $modelFullName, $modelBaseName, $modelRoutePrefix);
@@ -104,7 +138,10 @@ class RequestMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
+            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Model to use for getting attributes.'],
+            ['parent', 'p', InputOption::VALUE_REQUIRED, 'Parent model to use for getting attributes.'],
+            ['no-parent', null, InputOption::VALUE_NONE, 'No parent model to remove parent id column from rules.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
         ];

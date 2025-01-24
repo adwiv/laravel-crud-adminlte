@@ -10,21 +10,19 @@
     <li class="breadcrumb-item active"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
 </x-slot>
 
-@section('content')
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title text-lg">{{ model }} Details</div>
-            <div class="card-tools mr-0">
-                <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routeprefix }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
-            </div>
-        </div>
-
-        <div class="card-body p-0">
-            <table class="table table-sm table-hover">
-                {{ FIELDS }}
-            </table>
+<div class="card">
+    <div class="card-header">
+        <div class="card-title text-lg">{{ model }} Details</div>
+        <div class="card-tools mr-0">
+            <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routeprefix }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
         </div>
     </div>
-@stop
+
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover">
+            {{ FIELDS }}
+        </table>
+    </div>
+</div>
 
 </x-layouts.crud>

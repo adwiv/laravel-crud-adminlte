@@ -1,30 +1,13 @@
 @props([
-    'id', 'label',
-    'igroupSize' => null, 'igroupClass' => null, 'fgroupClass' => null, 'flabelClass' => 'text-lightblue',
+    'id', 'label', 'model' => null, 
     'appendIcon' => null, 'prependIcon' => null,
 ])
-@php
-    $formGroupClass = "form-group" . ($fgroupClass ? " $fgroupClass" : '');
-    $inputGroupClass = "input-group" . ($igroupSize ? " input-group-$igroupSize" : '') . ($igroupClass ? " $igroupClass" : '');
-
-    $formGroupClass = "form-group" . ($fgroupClass ? " $fgroupClass" : '');
-    $inputGroupClass = "input-group" . ($igroupSize ? " input-group-$igroupSize" : '') . ($igroupClass ? " $igroupClass" : '');
-@endphp
-
-<div class="{{ $formGroupClass }}">
-    @if($label)
-        <label for="{{ $id }}" class="{{ $flabelClass }}">{{ $label }}</label>
-    @endif
-    <div class="{{ $inputGroupClass }}">
-        {{ $slot }}
-    </div>
-</div>
-
-<div class="{{ $formGroupClass }}">
-    @if($label)
-        <label for="{{ $id }}" class="{{ $flabelClass }}">{{ $label }}</label>
-    @endif
-    <div class="{{ $inputGroupClass }}">
+@aware([
+    'model' => null,
+])
+<div {{ $attributes->merge(['class' => 'form-group']) }}>
+    <label for="{{ $id }}" class="text-lightblue">{{ $label }}</label>
+    <div class="input-group">
         @if(isset($prependSlot) || isset($prependIcon))
         <div class="input-group-prepend">
             @isset($prependSlot)

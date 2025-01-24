@@ -2,7 +2,6 @@
 
 namespace Adwiv\Laravel\CrudGenerator\Commands;
 
-use Adwiv\Laravel\CrudGenerator\ClassHelper;
 use Adwiv\Laravel\CrudGenerator\ColumnInfo;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use Illuminate\Console\GeneratorCommand;
@@ -100,7 +99,22 @@ class ModelMakeCommand extends GeneratorCommand
 ";
             }
 
-            if ($castType = $column->castType()) {
+            $enumName = $this->getEnum($table, $field) ?? Str::studly(Str::singular($field));
+            $enumClass = $this->qualifyClassForType($enumName, 'Enum');
+
+            if ($column->type == 'enum' && class_exists($enumClass, true)) {
+                $IMPORTS .= "use $enumClass;\n";
+                $CASTS .= "            '$field' => $enumName::class,\n";
+            } else if ($column->type == 'set') {
+                if (class_exists($enumClass, true)) {
+                    $IMPORTS .= "use App\Casts\CsvAsArray;\n";
+                    $IMPORTS .= "use $enumClass;\n";
+                    $CASTS .= "            '$field' => CsvAsArray::of($enumName::class),\n";
+                } else {
+                    $IMPORTS .= "use App\Casts\CsvAsArray;\n";
+                    $CASTS .= "            '$field' => CsvAsArray::class,\n";
+                }
+            } else if ($castType = $column->castType()) {
                 $CASTS .= "            '$field' => '$castType',\n";
             }
         }
@@ -165,6 +179,7 @@ class ModelMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists'],
+            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['table', 't', InputOption::VALUE_REQUIRED, 'Table to use to generate the model'],
             ['pivot', null, InputOption::VALUE_NONE, 'Indicates if the generated model should be a custom intermediate table model'],
         ];

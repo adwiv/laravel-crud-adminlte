@@ -31,12 +31,16 @@ class ControllerMakeCommand extends GeneratorCommand
 
     protected function buildClass($name)
     {
+        if ($this->option('regular') && ($this->option('parent') || $this->option('shallow'))) {
+            $this->fail("Cannot use --regular option with --parent or --shallow options.");
+        }
+
         // Deduce the model name
         $modelFullName = $this->getCrudModel($name);
         $modelBaseName = class_basename($modelFullName);
 
         // Get the resource type
-        $this->resourceType = $this->getCrudNestedType($modelFullName);
+        $this->resourceType = $this->getCrudControllerType($modelFullName);
 
         // Check if the model has a parent model
         $parentBaseName = $parentFullName = null;
@@ -52,7 +56,8 @@ class ControllerMakeCommand extends GeneratorCommand
         $parentRoutePrefix = array_pop($routePrefixParts);
 
         // Get the view prefix
-        $viewPrefix = $this->getCrudViewPrefix($modelBaseName, $parentBaseName, $routePrefix);
+        $viewPrefix = '';
+        if (!$this->option('api')) $viewPrefix = $this->getCrudViewPrefix($modelBaseName, $parentBaseName, $routePrefix);
 
         $replace = [];
 
@@ -116,9 +121,12 @@ class ControllerMakeCommand extends GeneratorCommand
         return [
             ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
+            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
+            ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
             ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
+            ['nested', null, InputOption::VALUE_NONE, 'Generate a nested resource controller.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the views used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],

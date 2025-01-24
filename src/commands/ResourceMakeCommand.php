@@ -2,9 +2,9 @@
 
 namespace Adwiv\Laravel\CrudGenerator\Commands;
 
-use Adwiv\Laravel\CrudGenerator\ClassHelper;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use Illuminate\Console\GeneratorCommand;
+use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Symfony\Component\Console\Input\InputOption;
 use Illuminate\Support\Str;
 
@@ -26,14 +26,32 @@ class ResourceMakeCommand extends GeneratorCommand
         // Deduce the model name
         $modelFullName = $this->getCrudModel($name);
         $modelBaseName = class_basename($modelFullName);
+        $modelInstance = new $modelFullName();
+        $modelCasts = $modelInstance->getCasts();
 
         $ignoreFields = ['password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         $fields = $this->getVisibleFields($modelFullName, $ignoreFields);
 
         $FIELDS = "";
         foreach ($fields as $field => $columnInfo) {
+            // Add boolean indicator for nullable datetime fields
+            if ($columnInfo->type === 'timestamp' && $columnInfo->isNullable() && Str::endsWith($field, '_at')) {
+                $camelName = Str::camel(substr($field, 0, -3));
+                $FIELDS .= "            '$camelName' => \$this->$field != null,\n";
+            }
+
             $camelName = Str::camel($field);
-            $FIELDS .= "            '$camelName' => \$this->$field,\n";
+            $castType = $modelCasts[$field] ?? null;
+            if ($castType) $castType = explode(':', $castType)[0];
+
+            if ($castType === 'date' || $castType === 'immutable_date') {
+                if ($columnInfo->isNullable())
+                    $FIELDS .= "            '$camelName' => \$this->{$field}?->format('Y-m-d'),\n";
+                else
+                    $FIELDS .= "            '$camelName' => \$this->{$field}->format('Y-m-d'),\n";
+            } else {
+                $FIELDS .= "            '$camelName' => \$this->$field,\n";
+            }
         }
 
         $replace = [
@@ -56,6 +74,7 @@ class ResourceMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
+            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Specify Model to use.'],
         ];
     }

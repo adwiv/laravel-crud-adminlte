@@ -7,48 +7,46 @@
     <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
 </x-slot>
 
-<x-slot name="content">
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title text-lg">{{ model }} List</div>
-            <div class="card-tools mr-0">
-                <a class="btn btn-sm btn-outline-success" href="{{route('{{ routeprefix }}.create')}}">Create {{ model }}</a>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <table class="table table-sm table-hover">
-                <thead class="text-sm">
-                <tr>
-                    {{ HEAD }}
-                    <th>&nbsp;</th>
-                </tr>
-                </thead>
-                <tbody class="text-sm">
-                @forelse(${{ pluralModelVariable }} as ${{ modelVariable }})
-                <tr>
-                    {{ BODY }}
-                    <td>
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}"
-                                class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
-                            <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}"
-                                class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                    <tr>
-                        {{ EMPTY }}
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
+<div class="card">
+    <div class="card-header">
+        <div class="card-title text-lg">{{ model }} List</div>
+        <div class="card-tools mr-0">
+            <a class="btn btn-sm btn-outline-success" href="{{route('{{ routeprefix }}.create')}}">Create {{ model }}</a>
         </div>
     </div>
-    {{-- // pagination --}}
-    <div class="row justify-content-center">
-        {{ ${{ pluralModelVariable }}->links('pagination::bootstrap-4') }}
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover">
+            <thead class="text-sm">
+            <tr>
+                {{ HEAD }}
+                <th>&nbsp;</th>
+            </tr>
+            </thead>
+            <tbody class="text-sm">
+            @forelse(${{ pluralModelVariable }} as ${{ modelVariable }})
+            <tr>
+                {{ BODY }}
+                <td>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}"
+                            class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
+                        <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}"
+                            class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
+                    </div>
+                </td>
+            </tr>
+            @empty
+                <tr>
+                    {{ EMPTY }}
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
     </div>
-</x-slot>
+</div>
+{{-- // pagination --}}
+<div class="row justify-content-center">
+    {{ ${{ pluralModelVariable }}->links('pagination::bootstrap-4') }}
+</div>
 
 </x-layouts.crud>

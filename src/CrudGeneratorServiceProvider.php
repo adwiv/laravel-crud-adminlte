@@ -3,6 +3,7 @@
 namespace Adwiv\Laravel\CrudGenerator;
 
 use Adwiv\Laravel\CrudGenerator\Commands\ControllerMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Commands\EnumMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\ModelMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\RequestMakeCommand;
 use Adwiv\Laravel\CrudGenerator\Commands\ResourceMakeCommand;
@@ -33,6 +34,7 @@ class CrudGeneratorServiceProvider extends ServiceProvider
                 ModelMakeCommand::class,
                 CrudGenerator::class,
                 ViewMakeCommand::class,
+                EnumMakeCommand::class,
             ]);
         }
     }

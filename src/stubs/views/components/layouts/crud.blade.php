@@ -34,7 +34,7 @@
 
 {{-- Add the page content --}}
 @section('content')
-    {{ $content }}
+    {{ $slot }}
 @stop
 
 {{-- Create a common footer --}}

@@ -18,7 +18,7 @@ class ColumnInfo
     public bool $notNull;
     public bool $unique;
     public ?string $foreign;
-    public array $values;
+    public array $values = [];
 
     public function __construct(array $column, array $uniques, array $foreign)
     {
@@ -31,9 +31,18 @@ class ColumnInfo
         $this->unique = in_array($this->name, $uniques);
         $this->foreign = $foreign[$this->name] ?? null;
 
+        if ($this->type == 'tinyint' && $this->length == 1) {
+            $this->type = 'boolean';
+            $this->length = 0;
+        }
         if ($this->type == 'enum' || $this->type == 'set') {
             $this->values = self::getEnumValues($this->type, $column['type']);
         }
+    }
+
+    public function isNullable(): bool
+    {
+        return !$this->notNull;
     }
 
     public function isUuid(): bool
@@ -74,7 +83,9 @@ class ColumnInfo
             case 'smallint':
                 return 'integer';
             case 'decimal':
+                return "decimal:{$this->precision}";
             case 'float':
+            case 'double':
                 return 'numeric';
             case 'varchar':
             case 'string':
@@ -83,6 +94,7 @@ class ColumnInfo
             case 'text':
             case 'guid':
                 return 'string';
+            case 'tinyint':
             case 'boolean':
                 return 'boolean';
             case 'date':
@@ -91,7 +103,7 @@ class ColumnInfo
             case 'timestamp':
             case 'datetime':
             case 'datetime_immutable':
-                return 'date_format:Y-m-d\\TH:i:s';
+                return 'date';
             case 'time':
             case 'time_immutable':
                 return 'date_format:H:i:s';
@@ -107,15 +119,17 @@ class ColumnInfo
     public function formInputType()
     {
         switch ($this->type) {
-            case 'smallint':
-            case 'integer':
-            case 'bigint':
-            case 'smallint':
-                return 'integer';
-            case 'decimal':
-            case 'float':
-            case 'double':
-                return 'numeric';
+            case 'char':
+            case 'varchar':
+            case 'string':
+            case 'guid':
+            case 'ascii_string':
+            case 'tinytext':
+                return 'string';
+            case 'text':
+            case 'mediumtext':
+            case 'longtext':
+                return 'textarea';
             case 'date':
             case 'date_immutable':
                 return 'date';
@@ -126,37 +140,37 @@ class ColumnInfo
             case 'datetime':
             case 'datetime_immutable':
                 return 'datetime';
-            case 'enum':
+            case 'smallint':
+            case 'integer':
+            case 'bigint':
+                return 'integer';
+            case 'decimal':
+            case 'float':
+            case 'double':
+                return 'numeric';
+            case 'tinyint':
             case 'boolean':
-                return 'single-select';
+                return 'boolean';
+            case 'enum':
+                return 'radio';
             case 'set':
-            case 'array':
-            case 'simple_array':
-                return 'multi-select';
-            case 'json':
-                return 'json';
-            case 'varchar':
-            case 'string':
-            case 'text':
-            case 'guid':
-            case 'ascii_string':
-                return 'text';
+                return 'checkbox';
+            default:
+                return 'unknown';
         }
-        throw new \Exception("Unknown form input type for column $this->name");
     }
 
     public function castType()
     {
         switch ($this->type) {
             case 'tinyint':
-                return $this->length === 1 ? 'boolean' : 'integer';
-            case 'decimal':
-                return "decimal:{$this->precision}";
             case 'boolean':
                 return 'boolean';
+            case 'decimal':
+                return "decimal:{$this->precision}";
             case 'date':
             case 'date_immutable':
-                return 'date';
+                return 'date:Y-m-d';
             case 'timestamp':
             case 'datetime':
             case 'datetime_immutable':
@@ -187,6 +201,12 @@ class ColumnInfo
             $columns[$columnName] = $columnInfo;
         }
         return $columns;
+    }
+
+    public static function getEnumColumns(string $table): array
+    {
+        $columns = self::fromTable($table);
+        return array_filter($columns, fn($column) => $column->type === 'enum' || $column->type === 'set');
     }
 
     public static function getUniqueColumns($table): array

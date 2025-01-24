@@ -3,10 +3,12 @@
 namespace Adwiv\Laravel\CrudGenerator\Commands;
 
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
+use BackedEnum;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
+use UnitEnum;
 
 class ViewMakeCommand extends GeneratorCommand
 {
@@ -47,7 +49,7 @@ class ViewMakeCommand extends GeneratorCommand
 
         $modelViewPrefix = array_pop($segments);
         $guessModel = Str::studly(Str::singular($modelViewPrefix));
-        $modelFullName = $this->getCrudModel($guessModel);
+        $modelFullName = $this->getCrudModel($guessModel . $this->type);
 
         $viewPrefix = substr($this->viewName, 0, strrpos($this->viewName, '.'));
         return $this->buildView($viewPrefix, $modelFullName);
@@ -58,7 +60,7 @@ class ViewMakeCommand extends GeneratorCommand
         $modelBaseName = class_basename($modelFullName);
 
         // Get the resource type
-        $this->resourceType = $this->getCrudNestedType($modelFullName);
+        $this->resourceType = $this->getCrudControllerType($modelFullName);
 
         // Check if the model has a parent model
         $parentBaseName = $parentFullName = null;
@@ -116,11 +118,15 @@ class ViewMakeCommand extends GeneratorCommand
      */
     protected function copyBladeFiles()
     {
+        // copy all view components
         $src = __DIR__ . '/../stubs/views/components';
         $dest = $this->laravel->resourcePath('views/components');
-        // copy all files from stubs/views/components/layouts/ to resource/views/components/layouts/
         $this->copyDir("$src/crud/", "$dest/crud/");
         $this->copyDir("$src/layouts/", "$dest/layouts/");
+        // copy all view scripts
+        $src = __DIR__ . '/../stubs/views/js';
+        $dest = $this->laravel->publicPath('js');
+        $this->copyDir("$src/", "$dest/");
     }
 
     protected function getArguments(): array
@@ -137,9 +143,12 @@ class ViewMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
+            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
+            ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
             ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
+            ['nested', null, InputOption::VALUE_NONE, 'Generate a nested resource controller.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the views used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
@@ -154,7 +163,7 @@ class ViewMakeCommand extends GeneratorCommand
         foreach ($fields as $field => $columnInfo) {
             if (in_array($field, ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'])) continue;
 
-            $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
+            $fieldName = ucwords(Str::snake($field, ' '));
             $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
             $BODY .= "                    <td class=\"\">{{ \$$modelVariable->$field }}</td>\n";
             $count++;
@@ -173,7 +182,7 @@ class ViewMakeCommand extends GeneratorCommand
         $FIELDS = "";
         $modelVariable = lcfirst(class_basename($modelClass));
         foreach ($fields as $field => $columnInfo) {
-            $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
+            $fieldName = ucwords(Str::snake($field, ' '));
             $FIELDS .= "
                 <tr>
                     <td>$fieldName</td>
@@ -188,63 +197,92 @@ class ViewMakeCommand extends GeneratorCommand
     {
         $FIELDS = "";
         $modelVariable = lcfirst(class_basename($modelClass));
+        $modelInstance = new $modelClass();
+        $modelCasts = $modelInstance->getCasts();
 
         /**
          * @var string $field
          * @var ColumnInfo $columnInfo
          */
         foreach ($fields as $field => $columnInfo) {
-            $castType = $columnInfo->castType();
+            $castType = $modelCasts[$field] ?? null;
             $formInputType = $columnInfo->formInputType();
-            $fieldName = ucwords(str_replace('_', ' ', Str::snake($field)));
-            $required = $columnInfo->notNull ? 'required' : '';
+            $fieldName = ucwords(Str::snake($field, ' '));
+            $required = false;
+            $columnInfo->notNull ? 'required' : '';
 
-            if ($castType == 'boolean') {
+            if ($castType === 'boolean') {
                 $FIELDS .= <<<END
-                <div class="col-sm-6 col-lg-4">
-                    <x-crud.select name="$field" $required :model="\$$modelVariable" :options="['FALSE','TRUE']" disable-feedback/>
-                </div>
+
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.select name="$field"{$required}>
+                        <x-crud.options :options="['FALSE','TRUE']"/>
+                    </x-crud.select>
+                </x-crud.group>
+
 END;
             } else if ($columnInfo->type == 'enum' || $columnInfo->type == 'set') {
-                $multiple = $columnInfo->type == 'set' ? 'multiple' : '';
-                $options = [];
-                foreach ($columnInfo->values as $value) {
-                    $options[] = "'$value'=>'$value'";
-                }
-                $options = implode(",", $options);
-                //TODO: Handle set type - field should be array and selected values can be multiple
-                $FIELDS .= <<<END
-                <div class="col-sm-6 col-lg-4">
-                    <x-crud.enum name="$field" $required $multiple :model="\$$modelVariable" :options="[$options]"/>
-                </div>
+                $type = $columnInfo->type == 'set' ? 'checkbox' : 'radio';
+                $choiceName = $columnInfo->type == 'set' ? $field . "[]" : $field;
+                $pluralFieldVar = Str::plural($field);
+
+                if ($castType) {
+                    // Cast type is either enum class name or a castable type
+                    $enumClass = last(explode(':', $castType));
+                    $isBackedEnum = is_subclass_of($enumClass, BackedEnum::class);
+                    if (!$isBackedEnum) $this->fail("Enum class $enumClass is not a BackedEnum");
+
+                    $FIELDS .= <<<END
+
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.choices type="$type" name="$choiceName"{$required} :enum="$enumClass::class"/>
+                </x-crud.group>
+
 END;
-                $FIELDS .=
-                    "                    <x-adminlte-select name=\"$field\" label=\"$fieldName\" class=\"custom-select\" disable-feedback $required $multiple\n" .
-                    "                                       label-class=\"text-sm\" fgroup-class=\"col-sm-6 col-lg-4 col-xl-3\">\n" .
-                    "                        <option value=\"\" $emptyOptionClass>Select $field...</option>\n" .
-                    "                        @foreach([$options] as \$key => \$value)\n" .
-                    "                            <option value=\"{{\$key}}\" @if((old('$field') ?? \${$modelVariable}->{$field} ?? '') == \$key) selected @endif>{{\$value}}</option>\n" .
-                    "                        @endforeach\n" .
-                    "                    </x-adminlte-select>\n";
+                } else {
+
+                    $options = [];
+                    foreach ($columnInfo->values as $value) {
+                        $ucValue = ucwords(Str::snake($value, ' '));
+                        $options[] = "'$value'=>'$ucValue'";
+                    }
+                    $options = implode(",", $options);
+
+                    $FIELDS .= <<<END
+
+                @php
+                    \$$pluralFieldVar = [$options];
+                @endphp
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.choices type="$type" name="$choiceName"{$required} :options="\$$pluralFieldVar"/>
+                </x-crud.group>
+
+END;
+                }
             } else if ($foreignKey = $columnInfo->foreign) {
-                $emptyOptionClass = $required ? 'class="d-none"' : '';
                 list($foreignTable, $foreignField) = preg_split('/,/', $foreignKey);
                 $foreignVar = Str::singular($foreignTable);
                 $foreignClass = Str::studly($foreignVar);
                 $foreignClass = "App\\Models\\$foreignClass";
-                $FIELDS .=
-                    "                    <x-adminlte-select name=\"$field\" label=\"$fieldName\" class=\"custom-select\" disable-feedback $required\n" .
-                    "                                       label-class=\"text-sm\" fgroup-class=\"col-sm-6 col-lg-4 col-xl-3\">\n" .
-                    "                        <option value=\"\" $emptyOptionClass>Select $foreignVar...</option>\n" .
-                    "                        @foreach($foreignClass::all() as \$fk_$foreignVar)\n" .
-                    "                            <option value=\"{{\$fk_{$foreignVar}->id}}\" @if((old('$field') ?? \${$modelVariable}->{$foreignField} ?? '') == \$fk_{$foreignVar}->id) selected @endif>{{\$fk_{$foreignVar}->name}}</option>\n" .
-                    "                        @endforeach\n" .
-                    "                    </x-adminlte-select>\n";
-            } else if ($formInputType == 'string' && $columnInfo->length > 255) {
                 $FIELDS .= <<<END
-                <div class="col-sm-6 col-lg-4">
-                    <x-crud.textarea name="$field" rows="5" $required :model="\$$modelVariable" disable-feedback/>
+
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.select name="$field"{$required}>
+                        <x-crud.options :options="$foreignClass::all()" valueKey="$foreignField" labelKey="name"/>
+                    </x-crud.select>
+                </x-crud.group>
+
+END;
+            } else if (
+                $formInputType == 'textarea' ||
+                ($formInputType == 'string' && $columnInfo->length > 255)
+            ) {
+                $FIELDS .= <<<END
+
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.textarea name="$field" rows="5"{$required}/>
                 </div>
+
 END;
             } else {
                 $type = 'type="text"';
@@ -254,16 +292,30 @@ END;
                 if ($formInputType == 'integer') $type = 'type="number"';
                 if ($formInputType == 'numeric') $type = 'type="number" step="0.01"';
 
-                $min = $columnInfo->unsigned ? 'min="0"' : '';
+                $lcFieldVar = strtolower($field);
+                if ($lcFieldVar == 'email' || Str::endsWith($lcFieldVar, '_email')) $type = 'type="email"';
+                if (in_array($lcFieldVar, ['password', 'password_confirmation'])) $type = 'type="password"';
+                if (in_array($lcFieldVar, ['phone', 'mobile']) || Str::endsWith($lcFieldVar, ['_phone', '_mobile'])) $type = 'type="tel"';
+                if (in_array($lcFieldVar, ['url', 'link']) || Str::endsWith($lcFieldVar, ['_url', '_link'])) $type = 'type="url"';
 
                 $FIELDS .= <<<END
-                <div class="col-sm-6 col-lg-4">
-                    <x-crud.input $type $min name="$field" $required :model="\$$modelVariable" disable-feedback/>
-                </div>
+
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                    <x-crud.input $type name="$field"{$required}/>
+                </x-crud.group>
+
 END;
             }
         }
 
+        $FIELDS = trim($FIELDS);
+
+        $FIELDS = <<<END
+        <x-crud.model class="row" :model="\$$modelVariable">
+            $FIELDS
+        </x-crud.model>
+
+END;
         return ['{{ FIELDS }}' => trim($FIELDS)];
     }
 }
