@@ -25,4 +25,36 @@
     </div>
 </div>
 
+<div class="card">
+    <div class="card-header">
+        <div class="card-title text-lg">Delete {{ model }}</div>
+        <div class="card-tools mr-0">
+        <form id="delete-form" action="{{route('{{ routeprefix }}.destroy', ${{ modelVariable }})}}" method="POST" >
+            @csrf
+            @method('DELETE')
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete()">Delete {{ model }}</button>
+        </form>
+        
+        @section('plugins.Sweetalert2', true)
+        <script>
+            function confirmDelete() {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    console.log(result);
+                    if (result.isConfirmed) {
+                        document.getElementById('delete-form').submit();
+                    }
+                })
+            }
+        </script>
+        </div>
+    </div>
+</div>
 </x-layouts.crud>

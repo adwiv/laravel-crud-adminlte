@@ -338,7 +338,7 @@ END;
 
                 <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
                     <x-crud.textarea name="$field" rows="5"{$required}/>
-                </div>
+                </x-crud.group>
 
 END;
             } else {
