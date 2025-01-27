@@ -103,7 +103,7 @@ class ColumnInfo
             case 'timestamp':
             case 'datetime':
             case 'datetime_immutable':
-                return 'date';
+                return 'date_format:Y-m-d\\TH:i:s';
             case 'time':
             case 'time_immutable':
                 return 'date_format:H:i:s';

@@ -19,8 +19,11 @@
     }
 
     if($enum) {
-        if($enum instanceof BackedEnum) {
-            $options = array_map(fn($case) => [$case->value => $case->label() ?? Str::title(Str::kebab($case->value, ' '))], $enum::cases());
+        $isBacked = $enum instanceof BackedEnum;
+        $options = [];
+        foreach($enum::cases() as $case) {
+            if($isBacked) {
+                $options[$case->value] = $case->label() ?? Str::title(Str::kebab($case->value, ' '));
         } else {
             $options = array_map(fn($case) => [$case->name => Str::title(Str::kebab($case->name, ' '))], $enum::cases());
         }
@@ -44,6 +47,12 @@
     // 'none' is used to prevent the value from being set from old input.
     if($oldKey != 'none') {
         $value = old($oldKey, $value);    
+    }
+
+    if ($value instanceof BackedEnum) {
+        $value = $value->value;
+    } else if ($value instanceof UnitEnum) {
+        $value = $value->name;
     }
 @endphp
 

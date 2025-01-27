@@ -28,10 +28,8 @@
                 {{ BODY }}
                 <td>
                     <div class="d-flex justify-content-between">
-                        <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}"
-                            class="text-primary"><i class="fas fa-eye pl-3"></i> View</a>
-                        <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}"
-                            class="text-primary"><i class="fas fa-edit pl-3"></i> Edit</a>
+                        <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}" class="text-primary text-center pl-3"><i class="fas fa-eye"></i> View</a>
+                        <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}" class="text-primary text-center pl-3"><i class="fas fa-edit"></i> Edit</a>
                     </div>
                 </td>
             </tr>

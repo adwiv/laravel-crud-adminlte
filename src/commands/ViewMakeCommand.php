@@ -160,13 +160,38 @@ class ViewMakeCommand extends GeneratorCommand
         $count = 0;
         $HEAD = $BODY = "";
         $modelVariable = lcfirst(class_basename($modelClass));
+        $modelInstance = new $modelClass();
+        $castTypes = $modelInstance->getCasts();
         foreach ($fields as $field => $columnInfo) {
-            if (in_array($field, ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'])) continue;
+            if (in_array($field, ['id', 'uid', 'uuid', 'password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'])) continue;
 
-            $fieldName = ucwords(Str::snake($field, ' '));
+            $castType = $castTypes[$field] ?? null;
+            $fieldName = ucwords(Str::replace(['_', '-', '.'], ' ', $field));
+            $fieldValue = "\$$modelVariable->$field";
+            if ($castType) $castType = explode(':', $castType)[0];
+
+            if ($castType == 'array' || $columnInfo->type == 'set' || $castType === 'boolean') {
+                $fieldValue = "json_encode(\${$modelVariable}->{$field})";
+            }
+
+            if ($castType === 'date' || $castType === 'immutable_date') {
+                if ($columnInfo->isNullable())
+                    $fieldValue = "\${$modelVariable}->{$field}?->format('Y-m-d')";
+                else
+                    $fieldValue = "\${$modelVariable}->{$field}->format('Y-m-d')";
+            }
+
             $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
-            $BODY .= "                    <td class=\"\">{{ \$$modelVariable->$field }}</td>\n";
+            $BODY .= "                    <td class=\"\">{{ $fieldValue }}</td>\n";
             $count++;
+
+            // Add boolean indicator for nullable datetime fields
+            if ($columnInfo->type === 'timestamp' && $columnInfo->isNullable() && Str::endsWith($field, '_at')) {
+                $fieldName = substr($fieldName, 0, -3);
+                $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
+                $BODY .= "                    <td class=\"\">{{ json_encode($fieldValue != null) }}</td>\n";
+                $count++;
+            }
         }
         $EMPTY = "                        <td colspan=\"$count\" class=\"text-center\">No records found</td>";
 
@@ -181,13 +206,43 @@ class ViewMakeCommand extends GeneratorCommand
     {
         $FIELDS = "";
         $modelVariable = lcfirst(class_basename($modelClass));
+        $modelInstance = new $modelClass();
+        $castTypes = $modelInstance->getCasts();
+
         foreach ($fields as $field => $columnInfo) {
-            $fieldName = ucwords(Str::snake($field, ' '));
+            if (in_array($field, ['password', 'remember_token'])) continue;
+
+            $castType = $castTypes[$field] ?? null;
+            $fieldName = ucwords(Str::replace(['_', '-', '.'], ' ', $field));
+            $fieldValue = "\$$modelVariable->$field";
+            if ($castType) $castType = explode(':', $castType)[0];
+
+            if ($castType == 'array' || $columnInfo->type == 'set' || $castType === 'boolean') {
+                $fieldValue = "json_encode(\${$modelVariable}->{$field})";
+            }
+
+            if ($castType === 'date' || $castType === 'immutable_date') {
+                if ($columnInfo->isNullable())
+                    $fieldValue = "\${$modelVariable}->{$field}?->format('Y-m-d')";
+                else
+                    $fieldValue = "\${$modelVariable}->{$field}->format('Y-m-d')";
+            }
+
             $FIELDS .= "
                 <tr>
                     <td>$fieldName</td>
-                    <td>{{ \$$modelVariable->$field }}</td>
+                    <td>{{ $fieldValue }}</td>
                 </tr>";
+
+            // Add boolean indicator for nullable datetime fields
+            if ($columnInfo->type === 'timestamp' && $columnInfo->isNullable() && Str::endsWith($field, '_at')) {
+                $fieldName = substr($fieldName, 0, -3);
+                $FIELDS .= "
+                <tr>
+                    <td>$fieldName</td>
+                    <td>{{ json_encode($fieldValue != null) }}</td>
+                </tr>";
+            }
         }
 
         return ['{{ FIELDS }}' => trim($FIELDS)];
@@ -205,6 +260,8 @@ class ViewMakeCommand extends GeneratorCommand
          * @var ColumnInfo $columnInfo
          */
         foreach ($fields as $field => $columnInfo) {
+            if (in_array($field, ['id', 'uid', 'uuid', 'password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'])) continue;
+
             $castType = $modelCasts[$field] ?? null;
             $formInputType = $columnInfo->formInputType();
             $fieldName = ucwords(Str::snake($field, ' '));
