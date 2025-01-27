@@ -24,23 +24,20 @@ class {{ class }} extends Controller
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function show($id)
+    public function show({{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail($id);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function update({{ model }}Request $request, $id)
+    public function update({{ model }}Request $request, {{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail($id);
         $fields = $request->validated();
         ${{ modelVariable }}->update($fields);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function destroy($id)
+    public function destroy({{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail($id);
         ${{ modelVariable }}->delete();
     }
 }

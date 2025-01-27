@@ -2,7 +2,9 @@
 
 namespace {{ namespace }};
 
+{{ IMPORTS }}
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class {{ class }} extends FormRequest
 {
@@ -13,7 +15,7 @@ class {{ class }} extends FormRequest
 
     public function rules(): array
     {
-        ${{ modelVariable }}Id = $this->route('{{ modelVariable }}');
+        ${{ modelVariable }}Id = $this->route()->parameter('{{ modelVariable }}');
         $ignoreId = ${{ modelVariable }}Id ? ",${{ modelVariable }}Id,id" : '';
 
         return [

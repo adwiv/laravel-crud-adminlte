@@ -4,35 +4,34 @@
 namespace {{ namespace }};
 
 use {{ namespacedModel }};
-use {{ namespacedParentModel }};
 use {{ rootNamespace }}Http\Controllers\Controller;
 use {{ rootNamespace }}Http\Requests\{{ model }}Request;
 use Exception;
 
 class {{ class }} extends Controller
 {
-    public function index({{ parentModel }} ${{ parentModelVariable }})
+    public function index()
     {
-        ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
+        ${{ pluralModelVariable }} = {{ model }}::paginate();
         return view('{{ viewprefix }}.index', compact('{{ pluralModelVariable }}'));
     }
 
-    public function create({{ parentModel }} ${{ parentModelVariable }})
+    public function create()
     {
         ${{ modelVariable }} = null;
-        $action = route('{{ routeprefix }}.store', ${{ parentModelVariable }});
+        $action = route('{{ routeprefix }}.store');
         $referrer = request()->headers->get('referer');
-
-        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
+        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
-    public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
+    public function store({{ model }}Request $request)
     {
-        $fields = $request->validated();
-        ${{ parentModelVariable }}->{{ pluralModelVariable }}()->create($fields);
-
         $referrer = $request->get('_referrer');
-        $redirectTo = $referrer ?: route('{{ routeprefix }}.index', ${{ parentModelVariable }});
+        $redirectTo = $referrer ?: route('{{ routeprefix }}.index');
+
+        $fields = $request->validated();
+        {{ model }}::create($fields);
+
         return redirect($redirectTo)->with('success', '{{ model }} created successfully');
     }
 

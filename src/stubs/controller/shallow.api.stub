@@ -11,39 +11,33 @@ use {{ rootNamespace }}Http\Resources\{{ model }}Resource;
 
 class {{ class }} extends Controller
 {
-    public function index(${{ parentModelVariable }}Id)
+    public function index({{ parentModel }} ${{ parentModelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         return {{ model }}Resource::collection(${{ pluralModelVariable }});
     }
 
-    public function store({{ model }}Request $request, ${{ parentModelVariable }}Id)
+    public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
-        ${{ parentModelVariable }} = {{ parentModel }}::findOrFail(${{ parentModelVariable }}Id);
         $fields = $request->validated();
-        $fields['{{ parentModelVariable }}_id'] = ${{ parentModelVariable }}->id;
-        ${{ modelVariable }} = {{ model }}::create($fields);
+        ${{ modelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->create($fields);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function show(${{ modelVariable }}Id)
+    public function show({{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function update({{ model }}Request $request, ${{ modelVariable }}Id)
+    public function update({{ model }}Request $request, {{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
         $fields = $request->validated();
         ${{ modelVariable }}->update($fields);
         return new {{ model }}Resource(${{ modelVariable }});
     }
 
-    public function destroy(${{ modelVariable }}Id)
+    public function destroy({{ model }} ${{ modelVariable }})
     {
-        ${{ modelVariable }} = {{ model }}::findOrFail(${{ modelVariable }}Id);
         ${{ modelVariable }}->delete();
     }
 }

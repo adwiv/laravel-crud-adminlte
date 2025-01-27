@@ -4,6 +4,8 @@
 
 <x-slot name="breadcrumbs">
     <li class="breadcrumb-item"><a href="{{route('{{ homeroute }}')}}">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.index')}}">{{ pluralParentModelTitle }}</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->id }}</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
 </x-slot>
 

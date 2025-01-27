@@ -2,100 +2,120 @@
 
 namespace Adwiv\Laravel\CrudGenerator;
 
-use Illuminate\Console\Command;
+use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
-class CrudGenerator extends Command
+use function Laravel\Prompts\confirm;
+
+class CrudGenerator extends GeneratorCommand
 {
-    use ClassHelper;
+    use CrudHelper {
+        CrudHelper::handle as protected handleCrudHelper;
+    }
 
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
+    protected $type = 'CRUD';
     protected $name = 'crud:all';
+    protected $description = 'Generate all CRUD files for a model';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Create complete CRUD code';
-
-    private function classExists($className): bool
+    protected function getStub(): string
     {
-        $path = $this->fullClassPath($className);
-        return file_exists($path);
+        throw new \Exception('Stub not implemented');
     }
 
     public function handle()
     {
-        $model = trim($this->argument('model'));
-        $modelClass = $this->fullModelClass($model);
-        $modelBaseName = class_basename($modelClass);
+        $model = $this->argument('model');
 
-        if (!($table = $this->option('table'))) {
-            if ($this->classExists($modelClass)) {
-                $table = (new $modelClass())->getTable();
-            } else {
-                $table = Str::snake(Str::plural($model));
+        $modelFullName = $this->qualifyModel($model);
+        $modelBaseName = class_basename($modelFullName);
+        $this->info("Generating CRUD for {$modelFullName}");
+
+        $table = $this->getCrudTable($modelFullName);
+
+        // If the model has parent models, we need to know the type of the resource
+        $resourceType = $this->getCrudControllerType($modelFullName);
+
+        // Check if the model has a parent model
+        $parentBaseName = $parentFullName = null;
+        if ($resourceType !== 'regular') {
+            $parentFullName = $this->getCrudParentModel($modelFullName);
+            $parentBaseName = $parentFullName ? class_basename($parentFullName) : null;
+        }
+
+        // Get the route prefix
+        $routePrefix = $this->getCrudRoutePrefix($modelBaseName, $parentBaseName);
+        $routePrefixParts = explode('.', $routePrefix);
+        $modelRoutePrefix = array_pop($routePrefixParts);
+        $parentRoutePrefix = array_pop($routePrefixParts);
+
+        // Get the view prefix
+        $viewPrefix = '';
+        if (!$this->option('api')) $viewPrefix = $this->getCrudViewPrefix($modelBaseName, $parentBaseName, $routePrefix);
+
+        // Generate Enums for the model
+        $enumColumns = ColumnInfo::getEnumColumns($table);
+        foreach ($enumColumns as $column) {
+            $field = $column->name;
+            $values = $column->values;
+            $this->info('');
+            $this->info("Found enum column `$field` in `$table` table with values: " . implode(', ', $values));
+            $enumExists = class_exists(Str::studly(Str::singular($field)));
+
+            if (confirm("Do you want to generate an enum for `$field` column?", $enumExists)) {
+                $enumName = $this->confirmEnumName(null, $field);
+                $this->addEnum($table, $field, $enumName);
+                $this->call('crud:enum', ['name' => $enumName, '--table' => $table, '--column' => $field, '--quiet' => true]);
             }
         }
-        echo "Creating CRUD for '$modelClass' using '$table' table\n";
 
-        // Generate Model
-        $classPath = $this->fullClassPath($modelClass);
-        if (!file_exists($classPath) || $this->confirm("$modelClass already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:model', ['name' => $modelClass, '--table' => $table, '--force' => true]);
-        }
-
-        // Generate Request
-        $requestClass = $this->fullRequestClass("{$modelBaseName}Request");
-        $classPath = $this->fullClassPath($requestClass);
-        if (!file_exists($classPath) || $this->confirm("$requestClass already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:request', ['name' => $requestClass, '--model' => $modelClass, '--force' => true]);
-        }
+        // Generate the model
+        $this->call('crud:model', ['name' => $modelFullName, '--table' => $table, '--quiet' => true]);
+        if (!class_exists($modelFullName, true)) $this->fail("Class {$modelFullName} does not exist.");
+        if ((new $modelFullName)->getTable() !== $table) $this->fail("Class `{$modelFullName}` does not use `{$table}` table.");
 
         // Generate Resource
-        $resourceClass = $this->fullResourceClass("{$modelBaseName}Resource");
-        $classPath = $this->fullClassPath($resourceClass);
-        if (!file_exists($classPath) || $this->confirm("$resourceClass already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:resource', ['name' => $resourceClass, '--model' => $modelClass, '--force' => true]);
+        $resourceFullClass = $this->qualifyClassForType("{$modelBaseName}Resource", 'Resource');
+        $this->call('crud:resource', ['name' => $resourceFullClass, '--model' => $modelFullName]);
+        if (!class_exists($resourceFullClass, true)) $this->fail("Class {$resourceFullClass} does not exist.");
+
+        // Generate Request
+        $requestFullClass = $this->qualifyClassForType("{$modelBaseName}Request", 'Request');
+        $args = ['name' => $requestFullClass, '--model' => $modelFullName, '--quiet' => true];
+        if (!$parentFullName) $args['--no-parent'] = true;
+        if ($parentFullName) $args['--parent'] = $parentFullName;
+        $this->call('crud:request', $args);
+        if (!class_exists($requestFullClass, true)) $this->fail("Class {$requestFullClass} does not exist.");
+
+        // Generate API Controller
+        if ($this->option('api')) {
+            $controllerClass = $this->qualifyClassForType("Api/{$modelBaseName}Controller", 'Controller');
+
+            $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--api' => true, '--quiet' => true];
+            if ($parentFullName) $args['--parent'] = $parentFullName;
+            $args["--$resourceType"] = true;
+            $this->call('crud:controller', $args);
+            if (!class_exists($controllerClass, true)) $this->fail("Class {$controllerClass} does not exist.");
+
+            exit();
         }
 
-        $viewPrefix = $this->option('view-prefix') ?? $this->option('prefix') ?? '';
-        $routePrefix = $this->option('route-prefix') ?? $this->option('prefix') ?? '';
+        // Generate Web Controller
+        $controllerClass = $this->qualifyClassForType("{$modelBaseName}Controller", 'Controller');
+        $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--viewprefix' => $viewPrefix, '--quiet' => true];
+        if ($parentFullName) $args['--parent'] = $parentFullName;
+        $args["--$resourceType"] = true;
+        $this->call('crud:controller', $args);
+        if (!class_exists($controllerClass, true)) $this->fail("Class {$controllerClass} does not exist.");
 
-        // Generate Controller
-        $controllerClass = $this->fullControllerClass("{$modelBaseName}Controller");
-        $classPath = $this->fullClassPath($controllerClass);
-        if (!file_exists($classPath) || $this->confirm("$controllerClass already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:controller', ['name' => $controllerClass, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
-        }
+        // Generate Views
+        $options = ['--model' => $modelFullName, '--viewprefix' => $viewPrefix, '--routeprefix' => $routePrefix, "--$resourceType" => true, '--quiet' => true];
+        if ($parentFullName) $options['--parent'] = $parentFullName;
 
-        // Generate Index View
-        $viewName = strtolower($modelBaseName);
-        $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'index');
-        if (!file_exists($viewPath) || $this->confirm("$viewName index view already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:view-index', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
-        }
-
-        // Generate Edit View
-        $viewName = strtolower($modelBaseName);
-        $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'edit');
-        if (!file_exists($viewPath) || $this->confirm("$viewName edit view already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:view-edit', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
-        }
-
-        // Generate Show View
-        $viewName = strtolower($modelBaseName);
-        $viewPath = $this->fullViewPath($viewName, $viewPrefix, 'show');
-        if (!file_exists($viewPath) || $this->confirm("$viewName show view already exists. Do you want to overwrite it?", false)) {
-            $this->call('crud:view-show', ['name' => $viewName, '--model' => $modelClass, '--force' => true, '--view-prefix' => $viewPrefix, '--route-prefix' => $routePrefix]);
-        }
+        $this->call('crud:view', array_merge($options, ['name' => "$viewPrefix.index"]));
+        $this->call('crud:view', array_merge($options, ['name' => "$viewPrefix.edit"]));
+        $this->call('crud:view', array_merge($options, ['name' => "$viewPrefix.show"]));
     }
 
     /**
@@ -114,10 +134,15 @@ class CrudGenerator extends Command
     protected function getOptions(): array
     {
         return [
-            ['table', null, InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],
+            ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
+            ['table', 't', InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],
+            ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
+            ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
+            ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
+            ['nested', null, InputOption::VALUE_NONE, 'Generate a nested resource controller.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for views and routes.'],
-            ['view-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
-            ['route-prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
+            ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
+            ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
         ];
     }
 }
