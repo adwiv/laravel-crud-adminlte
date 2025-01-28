@@ -74,7 +74,6 @@ class ResourceMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Specify Model to use.'],
         ];
     }

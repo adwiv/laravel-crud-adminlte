@@ -2,8 +2,12 @@
 
 namespace Adwiv\Laravel\CrudGenerator;
 
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Finder\Finder;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\select;
@@ -24,10 +28,9 @@ trait CrudHelper
         $this->enumList["$table::$column"] = $enum;
     }
 
-    public function info($string, $verbosity = null)
+    public function debug($string)
     {
-        if ($this->hasOption('quiet') && $this->option('quiet')) return;
-        parent::info($string, $verbosity);
+        parent::info($string, OutputInterface::VERBOSITY_DEBUG);
     }
 
     public function handle()
@@ -130,7 +133,7 @@ trait CrudHelper
         );
     }
 
-    protected function getCrudControllerType(string $model): string
+    protected function getCrudControllerType(string $table): string
     {
         if ($this->option('regular') && ($this->option('parent') || $this->option('shallow') || $this->option('nested'))) {
             $this->fail("Cannot use --regular option with --parent, --shallow or --nested options.");
@@ -144,7 +147,7 @@ trait CrudHelper
         $defaultOption = 'regular';
 
         if (!$controllerType && !$this->option('parent')) {
-            $parents = $this->guessCrudParentModels($model);
+            $parents = $this->guessCrudParentModels($table);
             if (empty($parents)) $controllerType = 'regular';
         }
 
@@ -163,13 +166,13 @@ trait CrudHelper
         return $controllerType;
     }
 
-    protected function getCrudParentModel(string $model, ?string $suggestedParent = null): ?string
+    protected function getCrudParentModel(string $table, ?string $suggestedParent = null): ?string
     {
         if ($this->hasOption('no-parent') && $this->option('no-parent')) return null;
 
         $parent = $this->option('parent');
         if (!$parent) {
-            $options = $this->guessCrudParentModels($model);
+            $options = $this->guessCrudParentModels($table);
             if (empty($options)) return null; // No parent models
             $parent = $this->confirmCrudParentModel($options, $suggestedParent);
         }
@@ -182,10 +185,9 @@ trait CrudHelper
         return $parent;
     }
 
-    protected function guessCrudParentModels(string $model): array
+    protected function guessCrudParentModels(string $table): array
     {
         $parents = [];
-        $table = (new $model)->getTable();
         foreach (Schema::getForeignKeys($table) as $foreignKey) {
             $foreignTable = $foreignKey['foreign_table'];
             $parents[] = Str::studly(Str::singular($foreignTable));
@@ -271,13 +273,14 @@ trait CrudHelper
         );
     }
 
-    protected function getCrudTable(string $model): string
+    protected function getCrudTable(string $model, $useExisting = true): string
     {
         $table = $this->option('table');
         if (!$table) {
-            $table = class_exists($model, true) ?
-                (new $model)->getTable() :
-                Str::snake(Str::pluralStudly(class_basename($model)));
+            $table = Str::snake(Str::pluralStudly(class_basename($model)));
+            if ($useExisting && class_exists($model)) {
+                $table = (new $model)->getTable();
+            }
 
             // only if table does not exist, ask user for it
             if (!Schema::hasTable($table)) {
@@ -384,15 +387,22 @@ trait CrudHelper
 
     protected function copyFile(string $file, string $sourceDir, string $destinationDir, bool $overwrite = false)
     {
+        $file = ltrim($file, '/');
         $sourceDir = rtrim($sourceDir, '/') . '/';
         $destinationDir = rtrim($destinationDir, '/') . '/';
+        $sourceFile = $sourceDir . $file;
+        $destinationFile = $destinationDir . $file;
+
+        if (!file_exists($sourceFile)) {
+            $this->fail("Source file $sourceFile does not exist.");
+        }
 
         if (!file_exists($destinationDir)) {
             mkdir($destinationDir, 0755, true);
         }
 
-        if (!$overwrite && file_exists($destinationDir . $file)) return;
-        copy($sourceDir . $file, $destinationDir . $file);
+        if (!$overwrite && file_exists($destinationFile)) return;
+        copy($sourceFile, $destinationFile);
         $this->info("Copied $file to $destinationDir");
     }
 
@@ -405,5 +415,59 @@ trait CrudHelper
             default: $name ?? '',
             required: 'Enum class name is required.',
         );
+    }
+
+    public function getModelForTable(string $table): string
+    {
+        $model = Str::studly(Str::singular($table));
+        $model = "App\\Models\\$model";
+        if (class_exists($model)) {
+            $modelInstance = new $model();
+            if ($modelInstance->getTable() === $table) {
+                return $model;
+            }
+        }
+
+        return $this->findModelForTable($table) ?? $model . "FIXME";
+    }
+
+    private function findModelForTable(string $table): ?string
+    {
+        $modelPath = is_dir(app_path('Models')) ? app_path('Models') : app_path();
+        $models = (new Collection(Finder::create()->files()->in($modelPath)))
+            ->filter(fn($file) => $file->getExtension() === 'php')
+            ->map(fn($file) => $this->qualifyModel(str_replace('.php', '', $file->getRelativePathname())))
+            ->sort()
+            ->values()
+            ->all();
+
+        foreach ($models as $model) {
+            if (class_exists($model)) {
+                try {
+                    $modelInstance = new $model();
+                    if ($modelInstance->getTable() === $table) {
+                        return $model;
+                    }
+                } catch (\Exception $e) {
+                    // ignore
+                }
+            }
+        }
+        return null;
+    }
+
+    public function getHomeRoute(): string
+    {
+        $homeroute = $this->option('homeroute') ?? "home";
+        if (!Route::has($homeroute)) {
+            $homeroute = text(
+                label: 'Home route:',
+                placeholder: 'E.g. home',
+                default: $homeroute,
+                required: true,
+                validate: fn($value) => Route::has($value) ? null : 'Home route does not exist.',
+            );
+        }
+        return $homeroute;
     }
 }

@@ -11,11 +11,6 @@ use {{ namespacedModel }};
  */
 class {{ class }} extends JsonResource
 {
-    public function __construct({{ model }} $resource)
-    {
-        parent::__construct($resource);
-    }
-
     /**
      * Transform the resource into an array.
      *

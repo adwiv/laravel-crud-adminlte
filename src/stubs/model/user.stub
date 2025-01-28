@@ -17,7 +17,10 @@ class {{ class }} extends Authenticatable
     protected $guarded = ['id', 'password', 'remember_token'];
 
     {{ CASTS }}
+
     {{ UNIQUES }}
+
     {{ BELONGS }}
+
     {{ HASMANY }}
 }

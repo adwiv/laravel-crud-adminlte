@@ -7,7 +7,7 @@
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.index')}}">{{ pluralParentModelTitle }}</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->id }}</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
-    <li class="breadcrumb-item active"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+    <li class="breadcrumb-item active">{{ ${{ modelVariable }}->name ?? ${{ modelVariable }}->id }}</li>
 </x-slot>
 
 <div class="card">

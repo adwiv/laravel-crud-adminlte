@@ -31,21 +31,18 @@ class ControllerMakeCommand extends GeneratorCommand
 
     protected function buildClass($name)
     {
-        if ($this->option('regular') && ($this->option('parent') || $this->option('shallow'))) {
-            $this->fail("Cannot use --regular option with --parent or --shallow options.");
-        }
-
         // Deduce the model name
         $modelFullName = $this->getCrudModel($name);
         $modelBaseName = class_basename($modelFullName);
+        $table = (new $modelFullName)->getTable();
 
         // Get the resource type
-        $this->resourceType = $this->getCrudControllerType($modelFullName);
+        $this->resourceType = $this->getCrudControllerType($table);
 
         // Check if the model has a parent model
         $parentBaseName = $parentFullName = null;
         if ($this->resourceType !== 'regular') {
-            $parentFullName = $this->getCrudParentModel($modelFullName);
+            $parentFullName = $this->getCrudParentModel($table);
             $parentBaseName = $parentFullName ? class_basename($parentFullName) : null;
         }
 
@@ -98,9 +95,15 @@ class ControllerMakeCommand extends GeneratorCommand
      */
     protected function buildModelReplacements(array $replace, string $modelFullName, string $modelBaseName, string $modelRoutePrefix): array
     {
+        $requestModel = $this->option('request') ?? "{$modelBaseName}Request";
+        $resourceModel = $this->option('resource') ?? "{$modelBaseName}Resource";
         return array_merge($replace, [
             '{{ namespacedModel }}' => $modelFullName,
             '{{ model }}' => $modelBaseName,
+            '{{ requestModel }}' => class_basename($requestModel),
+            '{{ requestFullModel }}' => $this->qualifyClassForType($requestModel, 'Request'),
+            '{{ resourceModel }}' => class_basename($resourceModel),
+            '{{ resourceFullModel }}' => $this->qualifyClassForType($resourceModel, 'Resource'),
             '{{ modelVariable }}' => Str::singular($modelRoutePrefix),
             '{{ pluralModelVariable }}' => $modelRoutePrefix,
         ]);
@@ -121,12 +124,13 @@ class ControllerMakeCommand extends GeneratorCommand
         return [
             ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
             ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
             ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
             ['nested', null, InputOption::VALUE_NONE, 'Generate a nested resource controller.'],
+            ['request', null, InputOption::VALUE_REQUIRED, 'Use the specified request class.'],
+            ['resource', null, InputOption::VALUE_REQUIRED, 'Use the specified resource class.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the views used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],

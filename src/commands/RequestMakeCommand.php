@@ -8,7 +8,6 @@ use BackedEnum;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Symfony\Component\Console\Input\InputOption;
 
 class RequestMakeCommand extends GeneratorCommand
@@ -41,7 +40,7 @@ class RequestMakeCommand extends GeneratorCommand
         $columns = ColumnInfo::fromTable($table);
 
         $parentIdColumn = null;
-        $parentFullName = $this->getCrudParentModel($modelFullName);
+        $parentFullName = $this->getCrudParentModel($table);
         if ($parentFullName) {
             $parentTable = (new $parentFullName)->getTable();
             $foreignColumns = ColumnInfo::getForeignColumns($table);
@@ -51,7 +50,7 @@ class RequestMakeCommand extends GeneratorCommand
 
         $RULES = "";
         $MESSAGES = "";
-        $IMPORTS = "";
+        $IMPORTS = array();
         foreach (array_keys($columns) as $field) {
             $ignore = ['id', 'uid', 'uuid', 'password', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
             if (in_array($field, $ignore)) continue;
@@ -65,31 +64,37 @@ class RequestMakeCommand extends GeneratorCommand
                 /** @var ColumnInfo $column */
                 $column = $columns[$field];
                 if ($column->unique) $this->unique = true;
+                $validationType = $column->validationType();
+                $isString = $validationType == 'string';
+
                 $rules[] = $column->notNull ? "'required'" : "'nullable'";
-                $rules[] = "'{$column->validationType()}'";
+                $rules[] = "'{$validationType}'";
 
                 if ($column->unsigned) $rules[] = "'min:0'";
-                if ($column->length > 0) $rules[] = "'max:{$column->length}'";
+                if ($isString && $column->length > 0) $rules[] = "'max:{$column->length}'";
                 if ($column->foreign) $rules[] = "'exists:{$column->foreign}'";
                 if ($column->unique) $rules[] = "\"unique:{$table},{$field}{\$ignoreId}\"";
 
                 $setRule = null;
                 if ($column->type == 'enum' || $column->type == 'set') {
                     $isEnum = $column->type == 'enum';
+                    $enumRule = null;
+
                     if ($castType) {
-                        // Cast type is either enum class name or a castable type
                         $enumClass = last(explode(':', $castType));
                         $isBackedEnum = is_subclass_of($enumClass, BackedEnum::class);
-                        if (!$isBackedEnum) $this->fail("Enum class $enumClass is not a BackedEnum");
-                        $IMPORTS .= "use $enumClass;\n";
-                        $enumBaseClass = class_basename($enumClass);
-                        $enumRule = "Rule::enum($enumBaseClass::class)";
-                    } else {
-                        $enumRule = "'in:{implode(',', $column->values)}'";
+                        if ($isBackedEnum) {
+                            $IMPORTS[] = "use $enumClass;";
+                            $enumBaseClass = class_basename($enumClass);
+                            $enumRule = "Rule::enum($enumBaseClass::class)";
+                        }
                     }
+
+                    $enumRule ??= "'in:" . implode(',', $column->values) . "'";
                     if ($isEnum) $rules[] = $enumRule;
                     else $setRule = $enumRule;
                 }
+
                 $rules = implode(", ", $rules);
                 $RULES .= "            '$field' => [$rules],\n";
                 if ($setRule) $RULES .= "            '$field.*' => ['required', 'string', $setRule],\n";
@@ -105,7 +110,7 @@ class RequestMakeCommand extends GeneratorCommand
         $replace = [
             '{{ RULES }}' => trim($RULES),
             '{{ MESSAGES }}' => trim($MESSAGES),
-            '{{ IMPORTS }}' => trim($IMPORTS),
+            '{{ IMPORTS }}' => implode("\n", array_unique($IMPORTS)),
         ];
 
         $replace = $this->buildModelReplacements($replace, $modelFullName, $modelBaseName, $modelRoutePrefix);
@@ -138,7 +143,6 @@ class RequestMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Model to use for getting attributes.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Parent model to use for getting attributes.'],
             ['no-parent', null, InputOption::VALUE_NONE, 'No parent model to remove parent id column from rules.'],

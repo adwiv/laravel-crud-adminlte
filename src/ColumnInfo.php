@@ -77,6 +77,7 @@ class ColumnInfo
     public function validationType()
     {
         switch ($this->type) {
+            case 'year':
             case 'smallint':
             case 'integer':
             case 'bigint':
@@ -143,6 +144,8 @@ class ColumnInfo
             case 'smallint':
             case 'integer':
             case 'bigint':
+            case 'mediumint':
+            case 'int':
                 return 'integer';
             case 'decimal':
             case 'float':
@@ -163,6 +166,8 @@ class ColumnInfo
     public function castType()
     {
         switch ($this->type) {
+            case 'year':
+                return 'integer';
             case 'tinyint':
             case 'boolean':
                 return 'boolean';

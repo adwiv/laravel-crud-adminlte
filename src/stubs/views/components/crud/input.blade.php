@@ -28,6 +28,16 @@
         $value = old($oldKey, $value);    
     }
 
+    if($value instanceof \Carbon\Carbon) {
+        if($type === 'date') {
+            $value = $value->format('Y-m-d');
+        } else if($type === 'time') {
+            $value = $value->format('H:i:s');
+        } else if($type === 'datetime-local') {
+            $value = $value->format('Y-m-d\TH:i:s');
+        }
+    }
+
     $attributes = $attributes->merge(['class' => 'form-control']);
     if($oldKey != $name) $attributes = $attributes->merge(['data-old-key' => $oldKey]);
 @endphp

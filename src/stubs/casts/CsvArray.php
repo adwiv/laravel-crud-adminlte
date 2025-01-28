@@ -19,12 +19,12 @@ use function Illuminate\Support\enum_value;
  * 
  * Example:
  * 
- *     'roles' => CsvAsArray::class,
+ *     'roles' => CsvArray::class,
  *     
- *     'roles' => CsvAsArray::of(Role::class),
+ *     'roles' => CsvArray::of(Role::class),
  * 
  */
-class CsvAsArray implements CastsAttributes, Castable
+class CsvArray implements CastsAttributes, Castable
 {
     public function get($model, string $key, $value, array $attributes)
     {
@@ -46,6 +46,8 @@ class CsvAsArray implements CastsAttributes, Castable
      */
     public static function castUsing(array $arguments)
     {
+        if (empty($arguments)) return new static;
+
         return new class($arguments) implements CastsAttributes
         {
             protected $arguments;

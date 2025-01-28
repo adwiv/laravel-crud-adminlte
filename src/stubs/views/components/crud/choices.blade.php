@@ -2,37 +2,30 @@
     'id', 'label', 'name', 
     'type' => null, 'placeholder' => null,
     'value' => null, 'model' => null, 'modelKey' => null, 'oldKey' => null,
-    'enum' => null, 'options' => null, 'valueKey' => 'id', 'labelKey' => 'name', 'default' => null,  
+    'options' => null, 'valueKey' => 'id', 'labelKey' => 'name', 'default' => null,  
 ])
 @aware([
     'id', 'label', 'model' => null, 
 ])
 @php
-    if(!in_array($type, ['radio', 'checkbox', 'switch'])) throw new \Exception("Invalid choices type: $type");
+    if(!in_array($type, ['radio', 'checkbox', 'switch', 'select'])) throw new \Exception("Invalid choices type: $type");
     if($model && !is_object($model) && !is_array($model)) throw new \Exception('Model must be an object or an array');
-    if($enum && $options) throw new \Exception('Enum and options cannot be used together');
-    if($enum && !is_subclass_of($enum, UnitEnum::class)) throw new \Exception('Enum must be a subclass of UnitEnum');
     if($options && !is_array($options) && !($options instanceof \Illuminate\Support\Collection)) throw new \Exception('Options must be an array or a collection');
     
-    if($options instanceof \Illuminate\Support\Collection) {
-        $options = $options->pluck($labelKey, $valueKey)->toArray();
-    }
-
-    if($enum) {
-        $options = [];
-        $isBacked = is_subclass_of($enum, BackedEnum::class);
-        foreach($enum::cases() as $case) {
-            if($isBacked) {
-                $options[$case->value] = $case->label() ?? Str::title(Str::kebab($case->value, ' '));
-        } else {
-                $options[$case->name] = Str::title(Str::kebab($case->name, ' '));
-            }
+    $options = collect($options)->mapWithKeys(function($option, $key) use ($labelKey, $valueKey) {
+        if($option instanceof BackedEnum) {
+            return [$option->value => method_exists($option, 'label') ? $option->label() : Str::title(Str::snake(Str::camel($option->value), ' '))];
         }
-    }
+        if($option instanceof UnitEnum) {
+            return [$option->name => Str::title(Str::snake(Str::camel($option->name), ' '))];
+        }
+        if(is_object($option)) {
+            return [$option->{$valueKey} => $option->{$labelKey}];
+        }
+        return ["$key" => "$option"];
+    })->toArray();
 
     $oldKey ??= preg_replace('@\[([^]]+)\]@', '.$1', preg_replace('@\[\]$@', '', $name));
-
-    $value ??= $default;
 
     // Get value from model if available
     if(!$value && $model) {
@@ -44,38 +37,52 @@
         }
     }
 
+    // If value is not set, set it to default
+    $value ??= $default;
+
     // Set value from old input if available. 
     // 'none' is used to prevent the value from being set from old input.
     if($oldKey != 'none') {
         $value = old($oldKey, $value);    
     }
 
-    if ($value instanceof BackedEnum) {
-        $value = $value->value;
-    } else if ($value instanceof UnitEnum) {
-        $value = $value->name;
-    }
+    // Convert value to an array to handle both single and multiple values
+    $value = collect($value)->map(function($item) {
+        if ($item instanceof BackedEnum) {
+            return "{$item->value}";
+        } else if ($item instanceof UnitEnum) {
+            return "{$item->name}";
+        } else if(is_bool($item)) {
+            return $item ? '1' : '0';
+        }
+        return "$item";
+    })->toArray();
 
-    $attributes = $attributes->merge(['class' => "custom-control custom-$type custom-control-inline col-form-label"]);
+    $attributes = $attributes->merge(['class' => "custom-$type"]);
     if($oldKey != $name) $attributes = $attributes->merge(['data-old-key' => $oldKey]);
 @endphp
 
-<!-- {{ print_r($value, true) }} -->
-@foreach($options as $key => $label)
-    @php
-        echo "<!-- $key -->";
-        if(is_array($value)) {
-            echo "<!-- Checking array: $key -->";
+@if($type === 'select')
+    <select id="{{ $id }}" name="{{ $name }}" {{ $attributes }}>
+        <option value="" @isset($required) disabled="disabled" @endisset @if(empty($value)) selected="selected" @endif>{{ $placeholder ?? "Select $label" }}</option>
+
+        @foreach($options as $key => $label)
+        @php
+            $selected = in_array("$key", $value)
+        @endphp
+            <option value="{{ $key }}" {{ $selected ? 'selected="selected"' : '' }}>{{ $label }}</option>
+        @endforeach
+    </select>
+@else
+    @foreach($options as $key => $label)
+        @php
             $selected = in_array("$key", $value);
-        } else {
-            echo "<!-- Checking string: $key -->";
-            $selected = "$value" === "$key"; // Compare as strings to avoid type mismatch
-        }
-        $choiceId = $id . '.' . Str::slug($key, '-');
-    @endphp
-    <div {{ $attributes }}>
-        <input type="{{ $type === 'switch' ? 'checkbox' : $type }}" name="{{ $name }}" id="{{ $choiceId }}" 
-            class="custom-control-input" value="{{ $key }}" @if($selected) checked="checked" @endif>
-        <label class="custom-control-label form-check-label" for="{{ $choiceId }}">{{ $label }}</label>
-    </div>      
-@endforeach
+            $choiceId = $id . '.' . Str::slug($key, '-');
+        @endphp
+        <div {{ $attributes->merge(['class' => "custom-control custom-control-inline col-form-label"]) }}>
+            <input type="{{ $type === 'switch' ? 'checkbox' : $type }}" name="{{ $name }}" id="{{ $choiceId }}" 
+                class="custom-control-input" value="{{ $key }}" @if($selected) checked="checked" @endif>
+            <label class="custom-control-label form-check-label" for="{{ $choiceId }}">{{ $label }}</label>
+        </div>      
+    @endforeach
+@endif

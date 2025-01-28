@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpMissingReturnTypeInspection */
 
 namespace {{ namespace }};
@@ -6,39 +7,44 @@ namespace {{ namespace }};
 use {{ namespacedModel }};
 use {{ namespacedParentModel }};
 use {{ rootNamespace }}Http\Controllers\Controller;
-use {{ rootNamespace }}Http\Requests\{{ model }}Request;
-use {{ rootNamespace }}Http\Resources\{{ model }}Resource;
+use {{ requestFullModel }};
+use {{ resourceFullModel }};
+use Illuminate\Http\Request;
 
 class {{ class }} extends Controller
 {
-    public function index({{ parentModel }} ${{ parentModelVariable }})
+    public function index(Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
-        ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
-        return {{ model }}Resource::collection(${{ pluralModelVariable }});
+        if ($term = $request->q) {
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}::{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
+        } else {
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
+        }
+        return {{ resourceModel }}::collection(${{ pluralModelVariable }});
     }
 
-    public function store({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }})
+    public function store({{ requestModel }} $request, {{ parentModel }} ${{ parentModelVariable }})
     {
         $fields = $request->validated();
         $fields['{{ parentModelVariable }}_id'] = ${{ parentModelVariable }}->id;
 
         ${{ modelVariable }} = {{ model }}::create($fields);
-        return new {{ model }}Resource(${{ modelVariable }});
+        return new {{ resourceModel }}(${{ modelVariable }});
     }
 
     public function show({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
         $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
-        return new {{ model }}Resource(${{ modelVariable }});
+        return new {{ resourceModel }}(${{ modelVariable }});
     }
 
-    public function update({{ model }}Request $request, {{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
+    public function update({{ requestModel }} $request, {{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
         $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
 
         $fields = $request->validated();
         ${{ modelVariable }}->update($fields);
-        return new {{ model }}Resource(${{ modelVariable }});
+        return new {{ resourceModel }}(${{ modelVariable }});
     }
 
     public function destroy({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})

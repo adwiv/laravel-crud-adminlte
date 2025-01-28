@@ -1,13 +1,14 @@
 @props([
     'id', 'label', 'model' => null, 
     'appendIcon' => null, 'prependIcon' => null,
+    'igroup' => null,
 ])
 @aware([
     'model' => null,
 ])
 <div {{ $attributes->merge(['class' => 'form-group']) }}>
     <label for="{{ $id }}" class="text-lightblue">{{ $label }}</label>
-    <div class="input-group">
+    <div class="input-group {{ $igroup }}">
         @if(isset($prependSlot) || isset($prependIcon))
         <div class="input-group-prepend">
             @isset($prependSlot)

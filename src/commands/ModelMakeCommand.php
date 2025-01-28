@@ -7,6 +7,9 @@ use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use Illuminate\Console\GeneratorCommand;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+use function Laravel\Prompts\confirm;
 
 class ModelMakeCommand extends GeneratorCommand
 {
@@ -29,13 +32,37 @@ class ModelMakeCommand extends GeneratorCommand
 
     protected function buildClass($name)
     {
+        $force = $this->option('force');
+        $this->copyFile('CsvArray.php', __DIR__ . '/../stubs/casts', $this->laravel->path . '/Casts');
+
         $modelFullName = $this->qualifyModel($name);
         $modelBaseName = class_basename($modelFullName);
         $this->authenticatable = $this->isAuthenticatableModel($modelFullName);
 
-        $TABLE = "";
-        $table = $this->getCrudTable($name);
+        $table = $this->getCrudTable($name, false);
         $defaultTable = Str::snake(Str::pluralStudly($modelBaseName));
+
+        // Begin:: Generate Enums for the model
+        $enumColumns = ColumnInfo::getEnumColumns($table);
+        foreach ($enumColumns as $column) {
+            $enumFieldName = $column->name;
+            $values = $column->values;
+            $this->info('');
+            $this->info("Found enum column `$enumFieldName` in `$table` table with values: " . implode(', ', $values));
+
+            $enumName = Str::studly(Str::singular($enumFieldName));
+            $enumClass = $this->qualifyClassForType($enumName, 'Enum');
+            $enumExists = $this->alreadyExists($enumClass);
+
+            if (confirm("Do you want to generate an enum for `$enumFieldName` column?", !$enumExists)) {
+                $enumName = $this->confirmEnumName(null, $enumFieldName);
+                $this->addEnum($table, $enumFieldName, $enumName);
+                $this->call('crud:enum', ['name' => $enumName, '--table' => $table, '--column' => $enumFieldName, '--quiet' => true, '--force' => $force]);
+            }
+        }
+        // End:: Generate Enums for the model
+
+        $TABLE = "";
 
         if ($table !== $defaultTable) {
             $TABLE = "\n    protected \$table = '$table';\n";
@@ -46,27 +73,47 @@ class ModelMakeCommand extends GeneratorCommand
         $BELONGS = "";
         $HASMANY = "";
         $CASTS = "";
-        $IMPORTS = "";
+        $IMPORTS = array();
         $UNIQUES = "";
         $TRAITS = "";
 
-        foreach (array_keys($columns) as $field) {
+        // Begin:: Generate fields for the model
+        /** @var ColumnInfo $column */
+        foreach ($columns as $field => $column) {
             if ($field == 'id') {
-                $column = $columns[$field];
                 if ($column->isUuid()) {
-                    $IMPORTS .= "use Illuminate\Database\Eloquent\Concerns\HasUuids;\n";
+                    $IMPORTS[] = "use Illuminate\Database\Eloquent\Concerns\HasUuids;";
                     $TRAITS .= ", HasUuids";
                 }
                 if ($column->isUlid()) {
-                    $IMPORTS .= "use Illuminate\Database\Eloquent\Concerns\HasUlids;\n";
+                    $IMPORTS[] = "use Illuminate\Database\Eloquent\Concerns\HasUlids;";
                     $TRAITS .= ", HasUlids";
                 }
             }
             if (in_array($field, ['id', 'uid', 'uuid', 'remember_token', 'deleted_at', 'updated_at', 'created_at'])) continue;
 
-            /** @var ColumnInfo $column */
-            $column = $columns[$field];
+            // Begin:: Generate casts for the model
+            $enumName = $this->getEnum($table, $field) ?? Str::studly(Str::singular($field));
+            $enumClass = $this->qualifyClassForType($enumName, 'Enum');
 
+            if ($column->type == 'enum' && class_exists($enumClass)) {
+                $IMPORTS[] = "use $enumClass;";
+                $CASTS .= "            '$field' => $enumName::class,\n";
+            } else if ($column->type == 'set') {
+                if (class_exists($enumClass)) {
+                    $IMPORTS[] = "use App\Casts\CsvArray;";
+                    $IMPORTS[] = "use $enumClass;";
+                    $CASTS .= "            '$field' => CsvArray::of($enumName::class),\n";
+                } else {
+                    $IMPORTS[] = "use App\Casts\CsvArray;";
+                    $CASTS .= "            '$field' => CsvArray::class,\n";
+                }
+            } else if ($castType = $column->castType()) {
+                $CASTS .= "            '$field' => '$castType',\n";
+            }
+            // End:: Generate casts for the model
+
+            // Begin:: Generate unique methods for the model
             if ($column->unique) {
                 $findMethod = "findBy" . Str::studly($field);
                 $findVariable = Str::camel($field);
@@ -80,67 +127,67 @@ class ModelMakeCommand extends GeneratorCommand
     public function {$findMethod}OrFail(\$$findVariable): self
     {
         return self::where('$field', \$$findVariable)->firstOrFail();
-    }";
-            }
-
-            if ($column->foreign) {
-                list($foreignTable, $foreignKey) = explode(',', $column->foreign);
-                $relation = Str::camel(Str::singular($foreignTable));
-                $relationClass = Str::studly($relation);
-                $IMPORTS .= "use " . $this->qualifyModel($relationClass) . ";\n";
-                if (strpos($IMPORTS, 'Illuminate\Database\Eloquent\Relations\BelongsTo;') === false) {
-                    $IMPORTS .= "use Illuminate\Database\Eloquent\Relations\BelongsTo;\n";
-                }
-                $BELONGS .= "
-    public function $relation(): BelongsTo
-    {
-        return \$this->belongsTo($relationClass::class, '$field', '$foreignKey');
     }
 ";
             }
+            // End:: Generate unique methods for the model
 
-            $enumName = $this->getEnum($table, $field) ?? Str::studly(Str::singular($field));
-            $enumClass = $this->qualifyClassForType($enumName, 'Enum');
+            // Begin:: Generate belongsTo methods for the model
+            if ($column->foreign) {
+                list($foreignTable, $foreignKey) = explode(',', $column->foreign);
+                $relationClass = $this->getModelForTable($foreignTable);
+                $relationBaseClass = class_basename($relationClass);
+                $relationName = Str::camel(Str::replaceEnd("_$foreignKey", '', $field));
+                $this->debug("$field, $foreignTable, $foreignKey, $relationBaseClass, $relationName");
 
-            if ($column->type == 'enum' && class_exists($enumClass, true)) {
-                $IMPORTS .= "use $enumClass;\n";
-                $CASTS .= "            '$field' => $enumName::class,\n";
-            } else if ($column->type == 'set') {
-                if (class_exists($enumClass, true)) {
-                    $IMPORTS .= "use App\Casts\CsvAsArray;\n";
-                    $IMPORTS .= "use $enumClass;\n";
-                    $CASTS .= "            '$field' => CsvAsArray::of($enumName::class),\n";
-                } else {
-                    $IMPORTS .= "use App\Casts\CsvAsArray;\n";
-                    $CASTS .= "            '$field' => CsvAsArray::class,\n";
-                }
-            } else if ($castType = $column->castType()) {
-                $CASTS .= "            '$field' => '$castType',\n";
+                $IMPORTS[] = "use $relationClass;";
+                $IMPORTS[] = "use Illuminate\Database\Eloquent\Relations\BelongsTo;";
+                $BELONGS .= "
+    public function $relationName(): BelongsTo
+    {
+        return \$this->belongsTo($relationBaseClass::class, '$field', '$foreignKey');
+    }
+";
             }
+            // End:: Generate belongsTo methods for the model
         }
+        // End of field loop
 
+        // Create HasOne and HasMany relations
         $relations = ColumnInfo::getReferencingKeys($table);
         foreach ($relations as $relation) {
             $foreignTable = $relation['table'];
             $foreignKey = $relation['key'];
-            $field = $relation['ref'];
+            $localKey = $relation['ref'];
             $oneOrMany = $relation['unique'] ? 'hasOne' : 'hasMany';
             $oneOrManyClass = $relation['unique'] ? 'HasOne' : 'HasMany';
-            $relation = Str::camel(Str::singular($foreignTable));
-            $relationClass = Str::studly($relation);
-            $IMPORTS .= "use " . $this->qualifyModel($relationClass) . ";\n";
-            $oneOrManyFullClass = 'Illuminate\Database\Eloquent\Relations\\' . $oneOrManyClass . ';';
-            if (strpos($IMPORTS, $oneOrManyFullClass) === false) {
-                $IMPORTS .= "use $oneOrManyFullClass\n";
+            $localTableRef = Str::lower(Str::replaceEnd("_$localKey", '', $foreignKey));
+            $localTableName = Str::plural($localTableRef);
+            $relationClass = $this->getModelForTable($foreignTable);
+            $relationBaseClass = class_basename($relationClass);
+
+            $relationName = $relation['unique'] ? Str::singular($foreignTable) : $foreignTable;
+            if ($localTableName !== $table) {
+                $relationName = "{$localTableRef}_{$relationName}";
+            } else if (Str::startsWith($relationName, "{$localTableRef}_")) {
+                $relationName = Str::replaceFirst("{$localTableRef}_", '', $relationName);
             }
+            $relationName = Str::camel($relationName);
+
+            $this->debug("$foreignTable, $foreignKey, $localKey, $localTableRef, $localTableName, $relationName");
+
+            $IMPORTS[] = "use $relationClass;";
+            $oneOrManyFullClass = 'Illuminate\Database\Eloquent\Relations\\' . $oneOrManyClass . ';';
+            $IMPORTS[] = "use $oneOrManyFullClass;";
             $HASMANY .= "
-    public function $relation(): $oneOrManyClass
+    public function $relationName(): $oneOrManyClass
     {
-        return \$this->$oneOrMany($relationClass::class, '$foreignKey', '$field');
+        return \$this->$oneOrMany($relationBaseClass::class, '$foreignKey', '$localKey');
     }
 ";
         }
 
+        // Create casts method if casts are not empty
         $CASTS = trim($CASTS);
         if (!empty($CASTS)) {
             $CASTS = trim("
@@ -157,8 +204,8 @@ class ModelMakeCommand extends GeneratorCommand
             '{{ namespacedModel }}' => $modelFullName,
             '{{ model }}' => $modelBaseName,
             '{{ BELONGS }}' => trim($BELONGS),
-            '{{ CASTS }}' => $CASTS,
-            '{{ IMPORTS }}' => trim($IMPORTS),
+            '{{ CASTS }}' => trim($CASTS),
+            '{{ IMPORTS }}' => implode("\n", array_unique($IMPORTS)),
             '{{ UNIQUES }}' => trim($UNIQUES),
             '{{ HASMANY }}' => trim($HASMANY),
             '{{ TABLE }}' => $TABLE,
@@ -179,7 +226,6 @@ class ModelMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['table', 't', InputOption::VALUE_REQUIRED, 'Table to use to generate the model'],
             ['pivot', null, InputOption::VALUE_NONE, 'Indicates if the generated model should be a custom intermediate table model'],
         ];

@@ -3,11 +3,13 @@
 namespace Adwiv\Laravel\CrudGenerator;
 
 use Illuminate\Console\GeneratorCommand;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
 use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\text;
 
 class CrudGenerator extends GeneratorCommand
 {
@@ -26,21 +28,22 @@ class CrudGenerator extends GeneratorCommand
 
     public function handle()
     {
+        $force = $this->option('force');
         $model = $this->argument('model');
 
         $modelFullName = $this->qualifyModel($model);
         $modelBaseName = class_basename($modelFullName);
         $this->info("Generating CRUD for {$modelFullName}");
 
-        $table = $this->getCrudTable($modelFullName);
+        $table = $this->getCrudTable($modelFullName, false);
 
         // If the model has parent models, we need to know the type of the resource
-        $resourceType = $this->getCrudControllerType($modelFullName);
+        $resourceType = $this->getCrudControllerType($table);
 
         // Check if the model has a parent model
         $parentBaseName = $parentFullName = null;
         if ($resourceType !== 'regular') {
-            $parentFullName = $this->getCrudParentModel($modelFullName);
+            $parentFullName = $this->getCrudParentModel($table);
             $parentBaseName = $parentFullName ? class_basename($parentFullName) : null;
         }
 
@@ -54,64 +57,56 @@ class CrudGenerator extends GeneratorCommand
         $viewPrefix = '';
         if (!$this->option('api')) $viewPrefix = $this->getCrudViewPrefix($modelBaseName, $parentBaseName, $routePrefix);
 
-        // Generate Enums for the model
-        $enumColumns = ColumnInfo::getEnumColumns($table);
-        foreach ($enumColumns as $column) {
-            $field = $column->name;
-            $values = $column->values;
-            $this->info('');
-            $this->info("Found enum column `$field` in `$table` table with values: " . implode(', ', $values));
-            $enumExists = class_exists(Str::studly(Str::singular($field)));
-
-            if (confirm("Do you want to generate an enum for `$field` column?", $enumExists)) {
-                $enumName = $this->confirmEnumName(null, $field);
-                $this->addEnum($table, $field, $enumName);
-                $this->call('crud:enum', ['name' => $enumName, '--table' => $table, '--column' => $field, '--quiet' => true]);
-            }
-        }
-
         // Generate the model
-        $this->call('crud:model', ['name' => $modelFullName, '--table' => $table, '--quiet' => true]);
-        if (!class_exists($modelFullName, true)) $this->fail("Class {$modelFullName} does not exist.");
+        $this->call('crud:model', ['name' => $modelFullName, '--table' => $table, '--quiet' => true, '--force' => $force]);
+        if (!class_exists($modelFullName)) $this->fail("Class {$modelFullName} does not exist.");
         if ((new $modelFullName)->getTable() !== $table) $this->fail("Class `{$modelFullName}` does not use `{$table}` table.");
 
-        // Generate Resource
-        $resourceFullClass = $this->qualifyClassForType("{$modelBaseName}Resource", 'Resource');
-        $this->call('crud:resource', ['name' => $resourceFullClass, '--model' => $modelFullName]);
-        if (!class_exists($resourceFullClass, true)) $this->fail("Class {$resourceFullClass} does not exist.");
-
         // Generate Request
-        $requestFullClass = $this->qualifyClassForType("{$modelBaseName}Request", 'Request');
-        $args = ['name' => $requestFullClass, '--model' => $modelFullName, '--quiet' => true];
+        $requestBaseName = text(label: 'Request name:', placeholder: 'E.g. UserRequest', default: "{$modelBaseName}Request");
+        $requestFullClass = $this->qualifyClassForType($requestBaseName, 'Request');
+        $args = ['name' => $requestFullClass, '--model' => $modelFullName, '--quiet' => true, '--force' => $force];
         if (!$parentFullName) $args['--no-parent'] = true;
         if ($parentFullName) $args['--parent'] = $parentFullName;
         $this->call('crud:request', $args);
-        if (!class_exists($requestFullClass, true)) $this->fail("Class {$requestFullClass} does not exist.");
+        if (!class_exists($requestFullClass)) $this->fail("Class {$requestFullClass} does not exist.");
 
-        // Generate API Controller
+        // Generate API Classes
         if ($this->option('api')) {
-            $controllerClass = $this->qualifyClassForType("Api/{$modelBaseName}Controller", 'Controller');
+            // Generate Resource
+            $resourceBaseName = text(label: 'Resource name:', placeholder: 'E.g. UserResource', default: "{$modelBaseName}Resource");
+            $resourceFullClass = $this->qualifyClassForType($resourceBaseName, 'Resource');
+            $this->call('crud:resource', ['name' => $resourceFullClass, '--model' => $modelFullName, '--force' => $force]);
+            if (!class_exists($resourceFullClass)) $this->fail("Class {$resourceFullClass} does not exist.");
 
-            $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--api' => true, '--quiet' => true];
+            // Generate API Controller
+            $controllerBaseName = text(label: 'API Controller name:', placeholder: 'E.g. Api/UserController', default: "Api/{$modelBaseName}Controller");
+            $controllerClass = $this->qualifyClassForType($controllerBaseName, 'Controller');
+            $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--api' => true, '--quiet' => true, '--force' => $force];
+            $args['--request'] = $requestFullClass;
+            $args['--resource'] = $resourceFullClass;
             if ($parentFullName) $args['--parent'] = $parentFullName;
             $args["--$resourceType"] = true;
             $this->call('crud:controller', $args);
-            if (!class_exists($controllerClass, true)) $this->fail("Class {$controllerClass} does not exist.");
+            if (!class_exists($controllerClass)) $this->fail("Class {$controllerClass} does not exist.");
 
             exit();
         }
 
         // Generate Web Controller
-        $controllerClass = $this->qualifyClassForType("{$modelBaseName}Controller", 'Controller');
-        $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--viewprefix' => $viewPrefix, '--quiet' => true];
+        $controllerBaseName = text(label: 'Web Controller name:', placeholder: 'E.g. UserController', default: "{$modelBaseName}Controller");
+        $controllerClass = $this->qualifyClassForType($controllerBaseName, 'Controller');
+        $args = ['name' => $controllerClass, '--model' => $modelFullName, '--routeprefix' => $routePrefix, '--viewprefix' => $viewPrefix, '--quiet' => true, '--force' => $force];
+        $args['--request'] = $requestFullClass;
         if ($parentFullName) $args['--parent'] = $parentFullName;
         $args["--$resourceType"] = true;
         $this->call('crud:controller', $args);
-        if (!class_exists($controllerClass, true)) $this->fail("Class {$controllerClass} does not exist.");
+        if (!class_exists($controllerClass)) $this->fail("Class {$controllerClass} does not exist.");
 
         // Generate Views
-        $options = ['--model' => $modelFullName, '--viewprefix' => $viewPrefix, '--routeprefix' => $routePrefix, "--$resourceType" => true, '--quiet' => true];
+        $options = ['--model' => $modelFullName, '--viewprefix' => $viewPrefix, '--routeprefix' => $routePrefix, "--$resourceType" => true, '--quiet' => true, '--force' => $force];
         if ($parentFullName) $options['--parent'] = $parentFullName;
+        $options['--homeroute'] = $this->getHomeRoute();
 
         $this->call('crud:view', array_merge($options, ['name' => "$viewPrefix.index"]));
         $this->call('crud:view', array_merge($options, ['name' => "$viewPrefix.edit"]));
@@ -134,6 +129,7 @@ class CrudGenerator extends GeneratorCommand
     protected function getOptions(): array
     {
         return [
+            ['force', 'f', InputOption::VALUE_NONE, 'Force generation of files even if they already exist.'],
             ['api', null, InputOption::VALUE_NONE, 'Generate controller for api.'],
             ['table', 't', InputOption::VALUE_REQUIRED, 'Use specified table name instead of guessing.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
@@ -143,6 +139,7 @@ class CrudGenerator extends GeneratorCommand
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the views used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix for the routes used.'],
+            ['homeroute', null, InputOption::VALUE_REQUIRED, 'Route name for the home page.'],
         ];
     }
 }

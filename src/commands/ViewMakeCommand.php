@@ -5,10 +5,11 @@ namespace Adwiv\Laravel\CrudGenerator\Commands;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use BackedEnum;
 use Illuminate\Console\GeneratorCommand;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-use UnitEnum;
+use function Laravel\Prompts\text;
 
 class ViewMakeCommand extends GeneratorCommand
 {
@@ -58,14 +59,15 @@ class ViewMakeCommand extends GeneratorCommand
     private function buildView($viewPrefix, $modelFullName)
     {
         $modelBaseName = class_basename($modelFullName);
+        $table = (new $modelFullName)->getTable();
 
         // Get the resource type
-        $this->resourceType = $this->getCrudControllerType($modelFullName);
+        $this->resourceType = $this->getCrudControllerType($table);
 
         // Check if the model has a parent model
         $parentBaseName = $parentFullName = null;
         if ($this->resourceType !== 'regular') {
-            $parentFullName = $this->getCrudParentModel($modelFullName) or $this->fail("No parent model even though resource type is $this->resourceType");
+            $parentFullName = $this->getCrudParentModel($table) or $this->fail("No parent model even though resource type is $this->resourceType");
             $parentBaseName = class_basename($parentFullName);
         }
 
@@ -75,25 +77,30 @@ class ViewMakeCommand extends GeneratorCommand
         $modelRoutePrefix = array_pop($routePrefixParts);
         $parentRoutePrefix = array_pop($routePrefixParts);
 
+        $modelVariable = Str::singular($modelRoutePrefix);
+
         $this->copyBladeFiles();
 
         $ignore = ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         $fields = $this->getVisibleFields($modelFullName, $ignore);
-        $replace = $this->buildViewReplacements($modelFullName, $fields);
+        $replace = $this->buildViewReplacements($modelFullName, $fields, $modelVariable);
+
+        $homeroute = $this->getHomeRoute();
 
         $replace = array_merge(
             $replace,
             [
-                '{{ homeroute }}' => 'home', //TODO:
+                '{{ homeroute }}' => $homeroute,
                 '{{ routeprefix }}' => $routePrefix,
                 '{{ parentrouteprefix }}' => $parentRoutePrefix,
                 '{{ model }}' => $modelBaseName,
-                '{{ modelVariable }}' => Str::singular($modelRoutePrefix),
-                '{{ pluralModelTitle }}' => Str::title(Str::snake(Str::plural($modelBaseName), ' ')),
+                '{{ modelVariable }}' => $modelVariable,
+                '{{ pluralModelTitle }}' => Str::title(Str::snake(Str::pluralStudly($modelBaseName), ' ')),
+                '{{ lcpluralModelTitle }}' => Str::lower(Str::snake(Str::pluralStudly($modelBaseName), ' ')),
                 '{{ pluralModelVariable }}' => $modelRoutePrefix,
                 '{{ parentModel }}' => $parentBaseName ?? '',
                 '{{ parentModelVariable }}' => $parentRoutePrefix ? Str::singular($parentRoutePrefix) : '',
-                '{{ pluralParentModelTitle }}' => $parentBaseName ? Str::title(Str::snake(Str::plural($parentBaseName), ' ')) : '',
+                '{{ pluralParentModelTitle }}' => $parentBaseName ? Str::title(Str::snake(Str::pluralStudly($parentBaseName), ' ')) : '',
                 '{{ pluralParentModelVariable }}' => $parentRoutePrefix ? $parentRoutePrefix : '',
             ],
         );
@@ -105,11 +112,11 @@ class ViewMakeCommand extends GeneratorCommand
         );
     }
 
-    protected function buildViewReplacements($modelClass, $fields): array
+    protected function buildViewReplacements($modelClass, $fields, $modelVariable): array
     {
-        if ($this->viewType == 'index') return $this->buildIndexViewReplacements($modelClass, $fields);
-        if ($this->viewType == 'edit') return $this->buildEditViewReplacements($modelClass, $fields);
-        if ($this->viewType == 'show') return $this->buildShowViewReplacements($modelClass, $fields);
+        if ($this->viewType == 'index') return $this->buildIndexViewReplacements($modelClass, $fields, $modelVariable);
+        if ($this->viewType == 'edit') return $this->buildEditViewReplacements($modelClass, $fields, $modelVariable);
+        if ($this->viewType == 'show') return $this->buildShowViewReplacements($modelClass, $fields, $modelVariable);
         $this->fail("Unknown view type '$this->viewType'.");
     }
 
@@ -143,7 +150,6 @@ class ViewMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Use the specified model class.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Use the specified parent class.'],
             ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
@@ -152,14 +158,14 @@ class ViewMakeCommand extends GeneratorCommand
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for views and routes.'],
             ['viewprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the views used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
+            ['homeroute', null, InputOption::VALUE_REQUIRED, 'Route name for the home page.'],
         ];
     }
 
-    protected function buildIndexViewReplacements($modelClass, $fields): array
+    protected function buildIndexViewReplacements($modelClass, $fields, $modelVariable): array
     {
         $count = 0;
         $HEAD = $BODY = "";
-        $modelVariable = lcfirst(class_basename($modelClass));
         $modelInstance = new $modelClass();
         $castTypes = $modelInstance->getCasts();
         foreach ($fields as $field => $columnInfo) {
@@ -202,10 +208,9 @@ class ViewMakeCommand extends GeneratorCommand
         ];
     }
 
-    protected function buildShowViewReplacements($modelClass, $fields): array
+    protected function buildShowViewReplacements($modelClass, $fields, $modelVariable): array
     {
         $FIELDS = "";
-        $modelVariable = lcfirst(class_basename($modelClass));
         $modelInstance = new $modelClass();
         $castTypes = $modelInstance->getCasts();
 
@@ -248,10 +253,9 @@ class ViewMakeCommand extends GeneratorCommand
         return ['{{ FIELDS }}' => trim($FIELDS)];
     }
 
-    protected function buildEditViewReplacements($modelClass, $fields): array
+    protected function buildEditViewReplacements($modelClass, $fields, $modelVariable): array
     {
         $FIELDS = "";
-        $modelVariable = lcfirst(class_basename($modelClass));
         $modelInstance = new $modelClass();
         $modelCasts = $modelInstance->getCasts();
 
@@ -264,17 +268,14 @@ class ViewMakeCommand extends GeneratorCommand
 
             $castType = $modelCasts[$field] ?? null;
             $formInputType = $columnInfo->formInputType();
-            $fieldName = ucwords(Str::snake($field, ' '));
-            $required = false;
-            $columnInfo->notNull ? 'required' : '';
+            $fieldName = Str::title(Str::snake(Str::camel($field), ' '));
+            $required = $columnInfo->notNull ? ' required' : '';
 
             if ($castType === 'boolean') {
                 $FIELDS .= <<<END
 
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
-                    <x-crud.select name="$field"{$required}>
-                        <x-crud.options :options="['FALSE','TRUE']"/>
-                    </x-crud.select>
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
+                    <x-crud.choices type="select" name="$field" :options="['FALSE','TRUE']{$required}"/>
                 </x-crud.group>
 
 END;
@@ -283,24 +284,24 @@ END;
                 $choiceName = $columnInfo->type == 'set' ? $field . "[]" : $field;
                 $pluralFieldVar = Str::plural($field);
 
+                $isBackedEnum = false;
                 if ($castType) {
-                    // Cast type is either enum class name or a castable type
                     $enumClass = last(explode(':', $castType));
                     $isBackedEnum = is_subclass_of($enumClass, BackedEnum::class);
-                    if (!$isBackedEnum) $this->fail("Enum class $enumClass is not a BackedEnum");
+                }
 
+                if ($isBackedEnum) {
                     $FIELDS .= <<<END
 
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
-                    <x-crud.choices type="$type" name="$choiceName"{$required} :enum="$enumClass::class"/>
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
+                    <x-crud.choices type="$type" name="$choiceName"{$required} :options="$enumClass::array()"/>
                 </x-crud.group>
 
 END;
                 } else {
-
                     $options = [];
                     foreach ($columnInfo->values as $value) {
-                        $ucValue = ucwords(Str::snake($value, ' '));
+                        $ucValue = Str::title(Str::snake(Str::camel($value), ' '));
                         $options[] = "'$value'=>'$ucValue'";
                     }
                     $options = implode(",", $options);
@@ -310,7 +311,7 @@ END;
                 @php
                     \$$pluralFieldVar = [$options];
                 @endphp
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
                     <x-crud.choices type="$type" name="$choiceName"{$required} :options="\$$pluralFieldVar"/>
                 </x-crud.group>
 
@@ -318,15 +319,13 @@ END;
                 }
             } else if ($foreignKey = $columnInfo->foreign) {
                 list($foreignTable, $foreignField) = preg_split('/,/', $foreignKey);
-                $foreignVar = Str::singular($foreignTable);
-                $foreignClass = Str::studly($foreignVar);
-                $foreignClass = "App\\Models\\$foreignClass";
+                $foreignClass = $this->getModelForTable($foreignTable);
+                $valueKey = $foreignField !== 'id' ? " valueKey=\"$foreignField\"" : '';
+
                 $FIELDS .= <<<END
 
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
-                    <x-crud.select name="$field"{$required}>
-                        <x-crud.options :options="$foreignClass::all()" valueKey="$foreignField" labelKey="name"/>
-                    </x-crud.select>
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
+                    <x-crud.choices type="select" name="$field" :options="$foreignClass::all()"{$valueKey}{$required}/>
                 </x-crud.group>
 
 END;
@@ -336,7 +335,7 @@ END;
             ) {
                 $FIELDS .= <<<END
 
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
                     <x-crud.textarea name="$field" rows="5"{$required}/>
                 </x-crud.group>
 
@@ -347,7 +346,14 @@ END;
                 if ($formInputType == 'time') $type = 'type="time"';
                 if ($formInputType == 'datetime') $type = 'type="datetime-local" step="1"';
                 if ($formInputType == 'integer') $type = 'type="number"';
-                if ($formInputType == 'numeric') $type = 'type="number" step="0.01"';
+                if ($formInputType == 'numeric') {
+                    $step = 1 / pow(10, $columnInfo->precision);
+                    $type = 'type="number" step="' . $step . '"';
+                }
+
+                if ($columnInfo->unsigned && ($formInputType == 'integer' || $formInputType == 'numeric')) {
+                    $type .= ' min="0"';
+                }
 
                 $lcFieldVar = strtolower($field);
                 if ($lcFieldVar == 'email' || Str::endsWith($lcFieldVar, '_email')) $type = 'type="email"';
@@ -357,7 +363,7 @@ END;
 
                 $FIELDS .= <<<END
 
-                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-4">
+                <x-crud.group id="$field" label="$fieldName" class="col-sm-6 col-lg-3">
                     <x-crud.input $type name="$field"{$required}/>
                 </x-crud.group>
 

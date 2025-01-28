@@ -42,7 +42,7 @@ class EnumMakeCommand extends GeneratorCommand
         $LABELS = "";
         foreach ($columnInfo->values as $value) {
             $varName = Str::camel($value);
-            $ucValue = ucwords(Str::snake($value, ' '));
+            $ucValue = Str::title(Str::snake($varName, ' '));
             $ENUMS .= "    case $varName = '$value';\n";
             $LABELS .= "            self::$varName => '$ucValue',\n";
         }
@@ -88,7 +88,6 @@ class EnumMakeCommand extends GeneratorCommand
     {
         return [
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
-            ['quiet', 'q', InputOption::VALUE_NONE, 'Do not output info messages.'],
             ['skip', 's', InputOption::VALUE_NONE, 'Skip if file exists.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'The name of the model class.'],
             ['table', 't', InputOption::VALUE_REQUIRED, 'The name of the table from which the enum values are taken.'],

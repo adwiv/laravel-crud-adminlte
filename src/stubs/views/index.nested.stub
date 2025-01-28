@@ -1,19 +1,33 @@
 <x-layouts.crud>
 
-<x-slot name="title">{{ model }} List</x-slot>
+<x-slot:title>{{ model }} List</x-slot>
 
-<x-slot name="breadcrumbs">
+<x-slot:breadcrumbs>
     <li class="breadcrumb-item"><a href="{{route('{{ homeroute }}')}}">Home</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.index')}}">{{ pluralParentModelTitle }}</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->id }}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
+    <li class="breadcrumb-item active">{{ pluralModelTitle }}</li>
 </x-slot>
 
 <div class="card">
     <div class="card-header">
-        <div class="card-title text-lg">{{ model }} List</div>
+        <div class="card-title">
+            <form action="{{ route('{{ routeprefix }}.index') }}" method="GET" class="form-inline input-group input-group-sm" autocomplete="off">
+                <input type="text" name="q" class="form-control" placeholder="Search {{ lcpluralModelTitle }}..." value="{{ request('q') }}" required>
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+        @if(request('q'))
+        <span class="card-title ml-3">
+            <a href="{{route('{{ routeprefix }}.index')}}" class="badge-pill btn btn-sm btn-primary">{{ request('q') }} <span class="ml-1 badge badge-sm badge-light badge-pill"><i class="fas fa-times"></i></span></a>
+        </span>
+        @endif
         <div class="card-tools mr-0">
-            <a class="btn btn-sm btn-outline-success" href="{{route('{{ routeprefix }}.create')}}">Create {{ model }}</a>
+            <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routeprefix }}.create')}}">Add {{ model }}</a>
         </div>
     </div>
     <div class="card-body p-0">
@@ -29,7 +43,7 @@
             <tr>
                 {{ BODY }}
                 <td>
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex justify-content-end">
                         <a href="{{ route('{{ routeprefix }}.show', ${{ modelVariable }}) }}" class="text-primary text-center pl-3"><i class="fas fa-eye"></i> View</a>
                         <a href="{{ route('{{ routeprefix }}.edit', ${{ modelVariable }}) }}" class="text-primary text-center pl-3"><i class="fas fa-edit"></i> Edit</a>
                     </div>

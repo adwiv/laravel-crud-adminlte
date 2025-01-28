@@ -1,18 +1,23 @@
 <?php
+
 /** @noinspection PhpMissingReturnTypeInspection */
 
 namespace {{ namespace }};
 
 use {{ namespacedModel }};
 use {{ rootNamespace }}Http\Controllers\Controller;
-use {{ rootNamespace }}Http\Requests\{{ model }}Request;
-use Exception;
+use {{ requestFullModel }};
+use Illuminate\Http\Request;
 
 class {{ class }} extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        ${{ pluralModelVariable }} = {{ model }}::paginate();
+        if ($term = $request->q) {
+            ${{ pluralModelVariable }} = {{ model }}::where('name', 'like', "%$term%")->paginate();
+        } else {
+            ${{ pluralModelVariable }} = {{ model }}::paginate();
+        }
         return view('{{ viewprefix }}.index', compact('{{ pluralModelVariable }}'));
     }
 
@@ -24,7 +29,7 @@ class {{ class }} extends Controller
         return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
-    public function store({{ model }}Request $request)
+    public function store({{ requestModel }} $request)
     {
         $referrer = $request->get('_referrer');
         $redirectTo = $referrer ?: route('{{ routeprefix }}.index');
@@ -47,7 +52,7 @@ class {{ class }} extends Controller
         return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
     }
 
-    public function update({{ model }}Request $request, {{ model }} ${{ modelVariable }})
+    public function update({{ requestModel }} $request, {{ model }} ${{ modelVariable }})
     {
         $fields = $request->validated();
         ${{ modelVariable }}->update($fields);

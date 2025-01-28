@@ -6,7 +6,7 @@
     <li class="breadcrumb-item"><a href="{{route('{{ homeroute }}')}}">Home</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
     @isset(${{ modelVariable }})
-        <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->id }}</a></li>
+        <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->name ?? ${{ modelVariable }}->id }}</a></li>
         <li class="breadcrumb-item active">Edit</li>
     @else
         <li class="breadcrumb-item active">Create</li>

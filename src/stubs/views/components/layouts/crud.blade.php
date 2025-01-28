@@ -1,4 +1,4 @@
-@props(['title' => null, 'breadcrumbs' => null, 'content' => null])
+@props(['title' => null, 'breadcrumbs' => null])
 @extends('adminlte::page')
 
 {{-- Extend and customize the browser title --}}
@@ -14,8 +14,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
     <style type="text/css">
         html, body {
+            font-family: 'Lato', sans-serif;
             font-size: 14px;
         }
     </style>
@@ -23,8 +25,10 @@
 
 {{-- Add the page content header --}}
 @section('content_header')
-    <div class="row">
-        <div class="col">
+        <div class="col-sm-6 d-flex align-items-center">
+            <h5 class="m-0">{{ $title }}</h5>
+        </div>
+        <div class="col-sm-6 d-flex justify-content-end">
             <ol class="breadcrumb">
                 {{ $breadcrumbs }}
             </ol>
