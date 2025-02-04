@@ -2,12 +2,12 @@
 
 namespace Adwiv\Laravel\CrudGenerator;
 
-use Adwiv\Laravel\CrudGenerator\Commands\ControllerMakeCommand;
-use Adwiv\Laravel\CrudGenerator\Commands\EnumMakeCommand;
-use Adwiv\Laravel\CrudGenerator\Commands\ModelMakeCommand;
-use Adwiv\Laravel\CrudGenerator\Commands\RequestMakeCommand;
-use Adwiv\Laravel\CrudGenerator\Commands\ResourceMakeCommand;
-use Adwiv\Laravel\CrudGenerator\Commands\ViewMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\ControllerMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\EnumMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\ModelMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\RequestMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\ResourceMakeCommand;
+use Adwiv\Laravel\CrudGenerator\Console\ViewMakeCommand;
 use Illuminate\Support\ServiceProvider;
 
 class CrudGeneratorServiceProvider extends ServiceProvider

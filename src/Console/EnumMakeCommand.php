@@ -1,11 +1,10 @@
 <?php
 
-namespace Adwiv\Laravel\CrudGenerator\Commands;
+namespace Adwiv\Laravel\CrudGenerator\Console;
 
 use Adwiv\Laravel\CrudGenerator\ColumnInfo;
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;

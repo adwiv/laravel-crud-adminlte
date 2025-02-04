@@ -1,15 +1,13 @@
 <?php
 
-namespace Adwiv\Laravel\CrudGenerator\Commands;
+namespace Adwiv\Laravel\CrudGenerator\Console;
 
 use Adwiv\Laravel\CrudGenerator\CrudHelper;
 use BackedEnum;
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-use function Laravel\Prompts\text;
 
 class ViewMakeCommand extends GeneratorCommand
 {

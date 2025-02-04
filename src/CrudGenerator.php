@@ -3,8 +3,6 @@
 namespace Adwiv\Laravel\CrudGenerator;
 
 use Illuminate\Console\GeneratorCommand;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
