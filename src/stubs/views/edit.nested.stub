@@ -5,10 +5,10 @@
 <x-slot name="breadcrumbs">
     <li class="breadcrumb-item"><a href="{{route('{{ homeroute }}')}}">Home</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.index')}}">{{ pluralParentModelTitle }}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->id }}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->name ?? ${{ parentModelVariable }}->id }}</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index', ${{ parentModelVariable }})}}">{{ pluralModelTitle }}</a></li>
     @isset(${{ modelVariable }})
-        <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.show', ${{ modelVariable }})}}">{{ ${{ modelVariable }}->name ?? ${{ modelVariable }}->id }}</a></li>
+        <li class="breadcrumb-item"><a href="{{route('{{ shallowrouteprefix }}.show', {{ nestedRouteParams }})}}">{{ ${{ modelVariable }}->name ?? ${{ modelVariable }}->id }}</a></li>
         <li class="breadcrumb-item active">Edit</li>
     @else
         <li class="breadcrumb-item active">Create</li>
@@ -36,7 +36,7 @@
         <form id="crud-edit" method="post" class="needs-validation" novalidate autocomplete="off" action="{{ $action }}">
             @if (${{ modelVariable }}) @method('PUT') @endif
             @csrf
-            <input type="hidden" name="_referrer" value="{{ $referrer }}">
+            <input type="hidden" name="_referrer" value="{{ old('_referrer', $referrer) }}">
             {{ FIELDS }}
         </form>
     </div>

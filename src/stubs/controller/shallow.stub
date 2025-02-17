@@ -15,11 +15,11 @@ class {{ class }} extends Controller
     public function index(Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
         if ($term = $request->q) {
-            ${{ pluralModelVariable }} = ${{ parentModelVariable }}::{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
         } else {
             ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         }
-        return view('{{ viewprefix }}.index', compact('{{ pluralModelVariable }}'));
+        return view('{{ viewprefix }}.index', compact('{{ parentModelVariable }}', '{{ pluralModelVariable }}'));
     }
 
     public function create({{ parentModel }} ${{ parentModelVariable }})
@@ -43,14 +43,16 @@ class {{ class }} extends Controller
 
     public function show({{ model }} ${{ modelVariable }})
     {
-        return view('{{ viewprefix }}.show', compact('{{ modelVariable }}'));
+        ${{ parentModelVariable }} = ${{ modelVariable }}->{{ parentModelVariable }};
+        return view('{{ viewprefix }}.show', compact('{{ modelVariable }}', '{{ parentModelVariable }}'));
     }
 
     public function edit({{ model }} ${{ modelVariable }})
     {
-        $action = route('{{ routeprefix }}.update', ${{ modelVariable }});
+        ${{ parentModelVariable }} = ${{ modelVariable }}->{{ parentModelVariable }};
+        $action = route('{{ shallowrouteprefix }}.update', ${{ modelVariable }});
         $referrer = request()->headers->get('referer');
-        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', 'action', 'referrer'));
+        return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
 
     public function update({{ requestModel }} $request, {{ model }} ${{ modelVariable }})

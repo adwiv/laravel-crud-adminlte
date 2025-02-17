@@ -133,6 +133,58 @@ trait CrudHelper
         );
     }
 
+    protected function getCrudRequestClass(string $model): string
+    {
+        $modelBaseName = class_basename($model);
+        $requestClass = $this->option('request') ?? $this->confirmCrudRequestClass("{$modelBaseName}Request");
+
+        if (!class_exists($requestClass)) $this->fail("Request class {$requestClass} does not exist.");
+
+        $this->info("Using request class {$requestClass} for this $this->type.");
+        return $requestClass;
+    }
+
+    private function confirmCrudRequestClass(string $requestBaseName): string
+    {
+        return text(
+            label: 'Request class name:',
+            placeholder: 'E.g. UserRequest',
+            default: $requestBaseName ?? '',
+            required: 'Request class name is required.',
+            hint: $this->type . ' will be generated using this request class.',
+            transform: fn(string $value) => $this->qualifyClassForType($value, 'Request'),
+            validate: function (string $value) {
+                return class_exists($value) ? null : "Request class $value does not exist.";
+            }
+        );
+    }
+
+    protected function getCrudResourceClass(string $model): string
+    {
+        $modelBaseName = class_basename($model);
+        $resourceClass = $this->option('resource') ?? $this->confirmCrudResourceClass("{$modelBaseName}Resource");
+
+        if (!class_exists($resourceClass)) $this->fail("Resource class {$resourceClass} does not exist.");
+
+        $this->info("Using resource class {$resourceClass} for this $this->type.");
+        return $resourceClass;
+    }
+
+    private function confirmCrudResourceClass(string $resourceBaseName): string
+    {
+        return text(
+            label: 'Resource class name:',
+            placeholder: 'E.g. UserResource',
+            default: $resourceBaseName ?? '',
+            required: 'Resource class name is required.',
+            hint: $this->type . ' will be generated using this resource class.',
+            transform: fn(string $value) => $this->qualifyClassForType($value, 'Resource'),
+            validate: function (string $value) {
+                return class_exists($value) ? null : "Resource class $value does not exist.";
+            }
+        );
+    }
+
     protected function getCrudControllerType(string $table): string
     {
         if ($this->option('regular') && ($this->option('parent') || $this->option('shallow') || $this->option('nested'))) {

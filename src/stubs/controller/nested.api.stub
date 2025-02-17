@@ -16,7 +16,7 @@ class {{ class }} extends Controller
     public function index(Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
         if ($term = $request->q) {
-            ${{ pluralModelVariable }} = ${{ parentModelVariable }}::{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
         } else {
             ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         }
@@ -53,7 +53,7 @@ class {{ class }} extends Controller
         ${{ modelVariable }}->delete();
     }
 
-    private function validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }})
+    private function validateParentModel({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
         if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
     }

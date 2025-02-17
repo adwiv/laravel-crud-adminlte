@@ -5,8 +5,8 @@
 <x-slot name="breadcrumbs">
     <li class="breadcrumb-item"><a href="{{route('{{ homeroute }}')}}">Home</a></li>
     <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.index')}}">{{ pluralParentModelTitle }}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->id }}</a></li>
-    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index')}}">{{ pluralModelTitle }}</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ parentrouteprefix }}.show', ${{ parentModelVariable }})}}">{{ ${{ parentModelVariable }}->name ?? ${{ parentModelVariable }}->id }}</a></li>
+    <li class="breadcrumb-item"><a href="{{route('{{ routeprefix }}.index', ${{ parentModelVariable }})}}">{{ pluralModelTitle }}</a></li>
     <li class="breadcrumb-item active">{{ ${{ modelVariable }}->name ?? ${{ modelVariable }}->id }}</li>
 </x-slot>
 
@@ -14,7 +14,7 @@
     <div class="card-header">
         <div class="card-title text-lg">{{ model }} Details</div>
         <div class="card-tools mr-0">
-            <a class="btn btn-sm btn-outline-primary" href="{{route('{{ routeprefix }}.edit', ${{ modelVariable }})}}">Edit {{ model }}</a>
+            <a class="btn btn-sm btn-outline-primary" href="{{route('{{ shallowrouteprefix }}.edit', {{ nestedRouteParams }})}}">Edit {{ model }}</a>
         </div>
     </div>
 
@@ -29,7 +29,7 @@
     <div class="card-header">
         <div class="card-title text-lg">Delete {{ model }}</div>
         <div class="card-tools mr-0">
-        <form id="delete-form" action="{{route('{{ routeprefix }}.destroy', ${{ modelVariable }})}}" method="POST" >
+        <form id="delete-form" action="{{route('{{ shallowrouteprefix }}.destroy', {{ nestedRouteParams }})}}" method="POST" >
             @csrf
             @method('DELETE')
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete()">Delete {{ model }}</button>

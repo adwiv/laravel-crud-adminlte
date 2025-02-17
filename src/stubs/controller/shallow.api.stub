@@ -16,7 +16,7 @@ class {{ class }} extends Controller
     public function index(Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
         if ($term = $request->q) {
-            ${{ pluralModelVariable }} = ${{ parentModelVariable }}::{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
         } else {
             ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         }

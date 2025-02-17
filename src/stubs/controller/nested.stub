@@ -15,11 +15,11 @@ class {{ class }} extends Controller
     public function index(Request $request, {{ parentModel }} ${{ parentModelVariable }})
     {
         if ($term = $request->q) {
-            ${{ pluralModelVariable }} = ${{ parentModelVariable }}::{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
+            ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->where('name', 'like', "%$term%")->paginate();
         } else {
             ${{ pluralModelVariable }} = ${{ parentModelVariable }}->{{ pluralModelVariable }}()->paginate();
         }
-        return view('{{ viewprefix }}.index', compact('{{ pluralModelVariable }}'));
+        return view('{{ viewprefix }}.index', compact('{{ parentModelVariable }}', '{{ pluralModelVariable }}'));
     }
 
     public function create({{ parentModel }} ${{ parentModelVariable }})
@@ -53,7 +53,7 @@ class {{ class }} extends Controller
         $this->validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }});
 
         $referrer = request()->headers->get('referer');
-        $action = route('{{ routeprefix }}.store', [${{ parentModelVariable }}, ${{ modelVariable }}]);
+        $action = route('{{ routeprefix }}.update', [${{ parentModelVariable }}, ${{ modelVariable }}]);
 
         return view('{{ viewprefix }}.edit', compact('{{ modelVariable }}', '{{ parentModelVariable }}', 'action', 'referrer'));
     }
@@ -79,7 +79,7 @@ class {{ class }} extends Controller
         return redirect()->route('{{ routeprefix }}.index', ${{ parentModelVariable }})->with('success', '{{ model }} deleted successfully');
     }
 
-    private function validateParentModel(${{ parentModelVariable }}, ${{ modelVariable }})
+    private function validateParentModel({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
         if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
     }

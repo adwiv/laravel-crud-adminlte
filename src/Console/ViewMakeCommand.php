@@ -63,10 +63,11 @@ class ViewMakeCommand extends GeneratorCommand
         $this->resourceType = $this->getCrudControllerType($table);
 
         // Check if the model has a parent model
-        $parentBaseName = $parentFullName = null;
+        $parentBaseName = $parentFullName = $parentTable = null;
         if ($this->resourceType !== 'regular') {
             $parentFullName = $this->getCrudParentModel($table) or $this->fail("No parent model even though resource type is $this->resourceType");
             $parentBaseName = class_basename($parentFullName);
+            $parentTable = (new $parentFullName)->getTable();
         }
 
         // Get the route prefix
@@ -74,6 +75,7 @@ class ViewMakeCommand extends GeneratorCommand
         $routePrefixParts = explode('.', $routePrefix);
         $modelRoutePrefix = array_pop($routePrefixParts);
         $parentRoutePrefix = array_pop($routePrefixParts);
+        $parentRouteFullPrefix = implode('.', $routePrefixParts) . '.' . $parentRoutePrefix;
 
         $modelVariable = Str::singular($modelRoutePrefix);
 
@@ -81,23 +83,35 @@ class ViewMakeCommand extends GeneratorCommand
 
         $ignore = ['id', 'uid', 'uuid', 'remember_token', 'created_at', 'updated_at', 'deleted_at'];
         $fields = $this->getVisibleFields($modelFullName, $ignore);
-        $replace = $this->buildViewReplacements($modelFullName, $fields, $modelVariable);
+        $replace = $this->buildViewReplacements($modelFullName, $fields, $modelVariable, $parentTable);
 
         $homeroute = $this->getHomeRoute();
+
+        $parentModelVariable = $parentRoutePrefix ? Str::singular($parentRoutePrefix) : '';
+        $shallowRoutePrefix = $routePrefix;
+        if ($this->resourceType === 'shallow') {
+            $routePrefixParts = explode('.', $shallowRoutePrefix);
+            if (count($routePrefixParts) >= 2) {
+                array_splice($routePrefixParts, -2, 1);
+                $shallowRoutePrefix = implode('.', $routePrefixParts);
+            }
+        }
 
         $replace = array_merge(
             $replace,
             [
                 '{{ homeroute }}' => $homeroute,
                 '{{ routeprefix }}' => $routePrefix,
-                '{{ parentrouteprefix }}' => $parentRoutePrefix,
+                '{{ shallowrouteprefix }}' => $shallowRoutePrefix,
+                '{{ parentrouteprefix }}' => $parentRouteFullPrefix,
+                '{{ nestedRouteParams }}' => $this->resourceType === 'nested' ? "[\$$parentModelVariable, \$$modelVariable]" : "\$$modelVariable",
                 '{{ model }}' => $modelBaseName,
                 '{{ modelVariable }}' => $modelVariable,
                 '{{ pluralModelTitle }}' => Str::title(Str::snake(Str::pluralStudly($modelBaseName), ' ')),
                 '{{ lcpluralModelTitle }}' => Str::lower(Str::snake(Str::pluralStudly($modelBaseName), ' ')),
                 '{{ pluralModelVariable }}' => $modelRoutePrefix,
                 '{{ parentModel }}' => $parentBaseName ?? '',
-                '{{ parentModelVariable }}' => $parentRoutePrefix ? Str::singular($parentRoutePrefix) : '',
+                '{{ parentModelVariable }}' => $parentModelVariable,
                 '{{ pluralParentModelTitle }}' => $parentBaseName ? Str::title(Str::snake(Str::pluralStudly($parentBaseName), ' ')) : '',
                 '{{ pluralParentModelVariable }}' => $parentRoutePrefix ? $parentRoutePrefix : '',
             ],
@@ -110,11 +124,11 @@ class ViewMakeCommand extends GeneratorCommand
         );
     }
 
-    protected function buildViewReplacements($modelClass, $fields, $modelVariable): array
+    protected function buildViewReplacements($modelClass, $fields, $modelVariable, $parentTable): array
     {
-        if ($this->viewType == 'index') return $this->buildIndexViewReplacements($modelClass, $fields, $modelVariable);
-        if ($this->viewType == 'edit') return $this->buildEditViewReplacements($modelClass, $fields, $modelVariable);
-        if ($this->viewType == 'show') return $this->buildShowViewReplacements($modelClass, $fields, $modelVariable);
+        if ($this->viewType == 'index') return $this->buildIndexViewReplacements($modelClass, $fields, $modelVariable, $parentTable);
+        if ($this->viewType == 'edit') return $this->buildEditViewReplacements($modelClass, $fields, $modelVariable, $parentTable);
+        if ($this->viewType == 'show') return $this->buildShowViewReplacements($modelClass, $fields, $modelVariable, $parentTable);
         $this->fail("Unknown view type '$this->viewType'.");
     }
 
@@ -160,7 +174,7 @@ class ViewMakeCommand extends GeneratorCommand
         ];
     }
 
-    protected function buildIndexViewReplacements($modelClass, $fields, $modelVariable): array
+    protected function buildIndexViewReplacements($modelClass, $fields, $modelVariable, $parentTable): array
     {
         $count = 0;
         $HEAD = $BODY = "";
@@ -185,6 +199,13 @@ class ViewMakeCommand extends GeneratorCommand
                     $fieldValue = "\${$modelVariable}->{$field}->format('Y-m-d')";
             }
 
+            if ($foreignKey = $columnInfo->foreign) {
+                list($foreignTable, $foreignField) = preg_split('/,/', $foreignKey);
+                if ($foreignTable == $parentTable) continue; // Skip foreign keys that point to the parent table
+                $relation = Str::camel(Str::singular($foreignTable));
+                $fieldValue = "\${$modelVariable}->{$relation}->name ?? \${$modelVariable}->{$relation}->id";
+            }
+
             $HEAD .= "                    <th class=\"\">$fieldName</th>\n";
             $BODY .= "                    <td class=\"\">{{ $fieldValue }}</td>\n";
             $count++;
@@ -206,7 +227,7 @@ class ViewMakeCommand extends GeneratorCommand
         ];
     }
 
-    protected function buildShowViewReplacements($modelClass, $fields, $modelVariable): array
+    protected function buildShowViewReplacements($modelClass, $fields, $modelVariable, $parentTable): array
     {
         $FIELDS = "";
         $modelInstance = new $modelClass();
@@ -231,6 +252,13 @@ class ViewMakeCommand extends GeneratorCommand
                     $fieldValue = "\${$modelVariable}->{$field}->format('Y-m-d')";
             }
 
+            if ($foreignKey = $columnInfo->foreign) {
+                list($foreignTable, $foreignField) = preg_split('/,/', $foreignKey);
+                if ($foreignTable == $parentTable) continue; // Skip foreign keys that point to the parent table
+                $relation = Str::camel(Str::singular($foreignTable));
+                $fieldValue = "\${$modelVariable}->{$relation}->name ?? \${$modelVariable}->{$relation}->id";
+            }
+
             $FIELDS .= "
                 <tr>
                     <td>$fieldName</td>
@@ -251,7 +279,7 @@ class ViewMakeCommand extends GeneratorCommand
         return ['{{ FIELDS }}' => trim($FIELDS)];
     }
 
-    protected function buildEditViewReplacements($modelClass, $fields, $modelVariable): array
+    protected function buildEditViewReplacements($modelClass, $fields, $modelVariable, $parentTable): array
     {
         $FIELDS = "";
         $modelInstance = new $modelClass();
@@ -317,6 +345,7 @@ END;
                 }
             } else if ($foreignKey = $columnInfo->foreign) {
                 list($foreignTable, $foreignField) = preg_split('/,/', $foreignKey);
+                if ($foreignTable == $parentTable) continue; // Skip foreign keys that point to the parent table
                 $foreignClass = $this->getModelForTable($foreignTable);
                 $valueKey = $foreignField !== 'id' ? " valueKey=\"$foreignField\"" : '';
 

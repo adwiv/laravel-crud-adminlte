@@ -64,8 +64,18 @@ class ControllerMakeCommand extends GeneratorCommand
 
         $replace = $this->buildModelReplacements($replace, $modelFullName, $modelBaseName, $modelRoutePrefix);
 
+        $shallowRoutePrefix = $routePrefix;
+        if ($this->resourceType === 'shallow') {
+            $routePrefixParts = explode('.', $shallowRoutePrefix);
+            if (count($routePrefixParts) >= 2) {
+                array_splice($routePrefixParts, -2, 1);
+                $shallowRoutePrefix = implode('.', $routePrefixParts);
+            }
+        }
+
         $replace['{{ viewprefix }}'] = $viewPrefix;
         $replace['{{ routeprefix }}'] = $routePrefix;
+        $replace['{{ shallowrouteprefix }}'] = $shallowRoutePrefix;
 
         $controllerNamespace = $this->getNamespace($name);
         $replace["use {$controllerNamespace}\Controller;\n"] = '';
@@ -95,8 +105,10 @@ class ControllerMakeCommand extends GeneratorCommand
      */
     protected function buildModelReplacements(array $replace, string $modelFullName, string $modelBaseName, string $modelRoutePrefix): array
     {
-        $requestModel = $this->option('request') ?? "{$modelBaseName}Request";
-        $resourceModel = $this->option('resource') ?? "{$modelBaseName}Resource";
+        $requestModel = $this->getCrudRequestClass($modelBaseName);
+
+        $resourceModel = $this->getCrudResourceClass($modelBaseName);
+
         return array_merge($replace, [
             '{{ namespacedModel }}' => $modelFullName,
             '{{ model }}' => $modelBaseName,
