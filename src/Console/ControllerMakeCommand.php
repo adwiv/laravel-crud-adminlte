@@ -16,13 +16,14 @@ class ControllerMakeCommand extends GeneratorCommand
     protected $description = 'Create a new controller class';
     protected $type = 'Controller';
 
+    private bool $isApi = false;
     private string $resourceType;
 
     protected function getStub(): string
     {
         $stub = "/stubs/controller/{$this->resourceType}.stub";
 
-        if ($this->option('api')) {
+        if ($this->isApi) {
             $stub = str_replace('.stub', '.api.stub', $stub);
         }
 
@@ -31,6 +32,8 @@ class ControllerMakeCommand extends GeneratorCommand
 
     protected function buildClass($name)
     {
+        $this->isApi = $this->option('api');
+
         // Deduce the model name
         $modelFullName = $this->getCrudModel($name);
         $modelBaseName = class_basename($modelFullName);
@@ -107,15 +110,19 @@ class ControllerMakeCommand extends GeneratorCommand
     {
         $requestModel = $this->getCrudRequestClass($modelBaseName);
 
-        $resourceModel = $this->getCrudResourceClass($modelBaseName);
+        if ($this->isApi) {
+            $resourceModel = $this->getCrudResourceClass($modelBaseName);
+            $replace = array_merge($replace, [
+                '{{ resourceModel }}' => class_basename($resourceModel),
+                '{{ resourceFullModel }}' => $this->qualifyClassForType($resourceModel, 'Resource'),
+            ]);
+        }
 
         return array_merge($replace, [
             '{{ namespacedModel }}' => $modelFullName,
             '{{ model }}' => $modelBaseName,
             '{{ requestModel }}' => class_basename($requestModel),
             '{{ requestFullModel }}' => $this->qualifyClassForType($requestModel, 'Request'),
-            '{{ resourceModel }}' => class_basename($resourceModel),
-            '{{ resourceFullModel }}' => $this->qualifyClassForType($resourceModel, 'Resource'),
             '{{ modelVariable }}' => Str::singular($modelRoutePrefix),
             '{{ pluralModelVariable }}' => $modelRoutePrefix,
         ]);
