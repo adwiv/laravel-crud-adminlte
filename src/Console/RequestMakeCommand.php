@@ -39,13 +39,18 @@ class RequestMakeCommand extends GeneratorCommand
         $table = $modelInstance->getTable();
         $columns = ColumnInfo::fromTable($table);
 
+        // Get the resource type
+        $resourceType = $this->getCrudControllerType($table);
+
         $parentIdColumn = null;
-        $parentFullName = $this->getCrudParentModel($table);
-        if ($parentFullName) {
-            $parentTable = (new $parentFullName)->getTable();
-            $foreignColumns = ColumnInfo::getForeignColumns($table);
-            $parentIdColumn = array_search("$parentTable,id", $foreignColumns, true);
-            if (!$parentIdColumn) $this->warn('Table does not have an parent id column. ');
+        if ($resourceType != 'regular') {
+            $parentFullName = $this->getCrudParentModel($table);
+            if ($parentFullName) {
+                $parentTable = (new $parentFullName)->getTable();
+                $foreignColumns = ColumnInfo::getForeignColumns($table);
+                $parentIdColumn = array_search("$parentTable,id", $foreignColumns, true);
+                if (!$parentIdColumn) $this->warn('Table does not have an parent id column. ');
+            }
         }
 
         $RULES = "";
@@ -145,7 +150,9 @@ class RequestMakeCommand extends GeneratorCommand
             ['force', 'f', InputOption::VALUE_NONE, 'Overwrite if file exists.'],
             ['model', 'm', InputOption::VALUE_REQUIRED, 'Model to use for getting attributes.'],
             ['parent', 'p', InputOption::VALUE_REQUIRED, 'Parent model to use for getting attributes.'],
-            ['no-parent', null, InputOption::VALUE_NONE, 'No parent model to remove parent id column from rules.'],
+            ['regular', null, InputOption::VALUE_NONE, 'Generate a regular controller.'],
+            ['shallow', null, InputOption::VALUE_NONE, 'Generate a shallow resource controller.'],
+            ['nested', null, InputOption::VALUE_NONE, 'Generate a nested resource controller.'],
             ['prefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
             ['routeprefix', null, InputOption::VALUE_REQUIRED, 'Prefix path for the routes used.'],
         ];

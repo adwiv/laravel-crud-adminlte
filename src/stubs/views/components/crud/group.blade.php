@@ -1,4 +1,4 @@
-@props(['id', 'label', 'model' => null, 'appendIcon' => null, 'prependIcon' => null, 'igroup' => null])
+@props(['id', 'label' => null, 'model' => null, 'appendIcon' => null, 'prependIcon' => null, 'igroup' => null])
 @aware([
     'model' => null,
 ])

@@ -83,7 +83,7 @@
 
 @if ($type === 'select')
   <select id="{{ $id }}" name="{{ $name }}" {{ $attributes }}>
-    <option value="" @isset($required) disabled="disabled" @endisset @if (empty($value)) selected="selected" @endif>
+    <option value="" @if ($attributes->has('required')) disabled="disabled" @endif @if (empty($value)) selected="selected" @endif>
       {{ $placeholder ?? "Select $label" }}</option>
 
     @foreach ($options as $key => $label)

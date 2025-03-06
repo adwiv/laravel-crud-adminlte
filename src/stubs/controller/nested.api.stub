@@ -55,6 +55,6 @@ class {{ class }} extends Controller
 
     private function validateParentModel({{ parentModel }} ${{ parentModelVariable }}, {{ model }} ${{ modelVariable }})
     {
-        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) abort(404, '{{ model }} does not belong to this {{ parentModel }}');
+        if (${{ parentModelVariable }}->isNot(${{ modelVariable }}->{{ parentModelVariable }})) throw new ModelNotFoundException('{{ model }} does not belong to this {{ parentModel }}');
     }
 }

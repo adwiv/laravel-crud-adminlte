@@ -63,8 +63,7 @@ class CrudGenerator extends GeneratorCommand
         // Generate Request
         $requestBaseName = text(label: 'Request name:', placeholder: 'E.g. UserRequest', default: "{$modelBaseName}Request");
         $requestFullClass = $this->qualifyClassForType($requestBaseName, 'Request');
-        $args = ['name' => $requestFullClass, '--model' => $modelFullName, '--quiet' => true, '--force' => $force];
-        if (!$parentFullName) $args['--no-parent'] = true;
+        $args = ['name' => $requestFullClass, '--model' => $modelFullName, '--quiet' => true, '--force' => $force, "--$resourceType" => true];
         if ($parentFullName) $args['--parent'] = $parentFullName;
         $this->call('crud:request', $args);
         if (!class_exists($requestFullClass)) $this->fail("Class {$requestFullClass} does not exist.");

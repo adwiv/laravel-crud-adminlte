@@ -220,8 +220,6 @@ trait CrudHelper
 
     protected function getCrudParentModel(string $table, ?string $suggestedParent = null): ?string
     {
-        if ($this->hasOption('no-parent') && $this->option('no-parent')) return null;
-
         $parent = $this->option('parent');
         if (!$parent) {
             $options = $this->guessCrudParentModels($table);
@@ -376,7 +374,7 @@ trait CrudHelper
         return $column;
     }
 
-    private function modelToPrefix(?string $model): string
+    private function modelToPrefix(?string $model): ?string
     {
         if (!$model) return null;
         $prefix = Str::lower(class_basename($model));
