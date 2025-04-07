@@ -34,7 +34,6 @@
       {{ $breadcrumbs }}
     </ol>
   </div>
-  </div>
 @stop
 
 {{-- Add the page content --}}
