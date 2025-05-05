@@ -82,9 +82,21 @@
 @endphp
 
 @if ($type === 'select')
+  @php
+    $noOptionSelected = true;
+    foreach($options as $key => $option) {
+        if(in_array("$key", $value)) {
+            $noOptionSelected = false;
+            break;
+        }
+    } 
+    $placeholder ??= "Select $label";
+  @endphp
   <select id="{{ $id }}" name="{{ $name }}" {{ $attributes }}>
-    <option value="" @if ($attributes->has('required')) disabled="disabled" @endif @if (empty($value)) selected="selected" @endif>
-      {{ $placeholder ?? "Select $label" }}</option>
+    @if ($placeholder)
+      <option value="" @if ($attributes->has('required')) disabled="disabled" @endif 
+        @if ($noOptionSelected) selected="selected" @endif>{{ $placeholder }}</option>
+    @endif
 
     @foreach ($options as $key => $label)
       @php
